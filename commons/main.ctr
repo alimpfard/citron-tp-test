@@ -1,0 +1,125 @@
+import
+  Library/Data/Map
+  Library/Data/Set/HashSet: 'HashSet'.
+
+var Lexer is Object cnew: {
+  on: 'split:' do: {:str
+    str is str replace: '\n' with: ' ', replace: '\t' with: ' '.
+    str is str ~ ?>s/[،.,:;'"\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321\`]|[\p{L}\p{N}\d-[،\.,:;'"\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321\`]]+/ $0 /gmuW<?.
+    str is str split: ' ', filter: \:_:x x length > 0.
+    ^str.
+  }.
+}.
+
+var isPunctuation is \:x (x ~ ?>s/[‌‎،\.,:;'"\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321\`\s*]//gmuW<?) length = 0.
+var stopwords is HashSet addAll: (File new: 'stopwords/persian', read split: '\n').
+var isStopword is \:x stopwords contains: x.
+
+var TokenAnalyser is Object cnew: {
+  on: 'with:' do: {:lexer ^cnew: { lexer => lexer. }. }.
+
+  on: 'analyse:' do: {:text
+    var resmap is Map new.
+    var incrOrInsert is {\:key
+      resmap contains: key, ifTrue: {
+        resmap at: key, +=: 1.
+      } ifFalse: {
+        resmap put: 1 at: key.
+      }.
+    }.
+    var split is my lexer split: text, filter: \:_:x isStopword[x] not & isPunctuation[x] not.
+    split each_v: incrOrInsert.
+    ^resmap.
+  }.
+  on: 'TF-of:name:' do: {:from:name
+      ^from fmap: \:x x @ name.
+  }.
+  on: 'TF:IDF-of:index:name:' do: {:res:from:idx:name
+    # var res is from fmap: \:x x @ name.
+    ^from @ idx @ name / (res filter: \:x x, count).
+  }.
+  on: 'consolidateAll:pre:post:' do: {:self:allTargetTexts:pre:post
+    var consolidated is Array new fill: allTargetTexts count with: \:_ Map new: \:_ 0.
+    var allTokens is HashSet new.
+    allTargetTexts each: {:i:targetText
+      pre[i].
+      self analyse: targetText last, each: {:k:v
+        consolidated at: i, put: v at: k.
+        allTokens add: k.
+      }.
+      post[i].
+    }.
+    ^[allTokens, consolidated].
+  }.
+  on: 'consolidate:withTokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
+    var consolidateAll is Array new fill: consolidated count with: Nil.
+    var docs is Array new fill: consolidated count with: \:i i.
+    var ii is -1.
+    allTokens toArray each_v: {:x
+      pre[ii +=: 1].
+      var tf is self
+        TF-of: consolidated
+        name: x
+      .
+      consolidateAll
+        put: (
+          docs fmap: \:i [
+            x,
+            (self
+              TF: tf
+              IDF-of: consolidated
+              index: i
+              name: x
+            )
+          ]
+        )
+        at: ii.
+      post[ii].
+    }.
+    ^consolidateAll.
+  }.
+  on: 'merge:tokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
+    var consolidateAll is Map new.
+    var i is -1.
+    allTokens each_v: {:x
+      pre[(i +=: 1)].
+      consolidateAll
+        put:
+            (self
+              TF-of: consolidated
+              name: x
+            )
+        at: x.
+      post[i].
+    }.
+    ^consolidateAll.
+  }.
+  on: 'detectKeywords:forDocuments:pre:post:' do: {:consolidateAll:allTargetTexts:pre:post
+    var max-with-idx is {:what
+      var idx is 0.
+      var max is 0.
+      what each: {:i:x x last > max ifTrue: { idx is x head. max is x last. }. }.
+      ^[idx, max].
+    }.
+    ^allTargetTexts imap: {:i
+      pre[i].
+      var kw is max-with-idx[Generator elementsOf: consolidateAll, fmap: \:x x @ i].
+      post[i].
+      ^kw.
+    }.
+  }.
+  on: 'prettyPrint:tokens:' do: {:resmap:tokens
+    var res is tokens
+      fmap: \:k '%:L\t| %s' % [',\t', (resmap at: k), k],
+      join: '\n'.
+    var op is File tempFileLike: 'tmpXXXXXX', write: res.
+    var op2 is File tempFileLike: 'tmpXXXXXX'.
+    Shell call: 'sort -k${{(resmap at: tokens head) count}}$ ${{op path}}$ | tee ${{op2 path}}$'.
+    var ff is op2 read.
+    op close.
+    op2 close.
+    op delete.
+    op2 delete.
+    ^ff.
+  }.
+}.

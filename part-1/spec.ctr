@@ -1,0 +1,99 @@
+Broom memoryLimit: 1024 * 1024 * 1024 * 4.
+
+import main: \*.
+import
+  Library/Test: 'describe'
+.
+
+describe Lexer do: {:it:let
+  it exists do: {
+    { Lexer. } should not raiseError: String.
+  }.
+  let[Reflect thisContext] lexer { Lexer }.
+
+  it ~ 'is not Nil' do: {
+    lexer should not = Nil.
+  }.
+
+  it can lex simple persian sentences do: {
+    (lexer split: 'کلمات فارسی')
+      should = ['کلمات', 'فارسی'].
+  }.
+
+  it can lex persian sentences with half-width spaces do: {
+    (lexer split: 'این جمله (خیلی) پیچیده نیست!!!')
+      should = (['این' ,'جمله' ,'(' ,'خیلی' ,')' ,'پیچیده' ,'نیست', '!', '!', '!']).
+  }.
+  it can lex arbitrary persian text do: {
+    # Pen writeln:
+      (lexer split: 'می‌شدید اون پارسر ترم رو دیدی؟ یه تیکه هست مچ رو درست پیدا میکنه ولی توشو خالی میده')
+        should = [
+          'می‌شدید', 'اون', 'پارسر',
+          'ترم', 'رو', 'دیدی', '؟', 'یه',
+          'تیکه', 'هست', 'مچ', 'رو', 'درست',
+          'پیدا', 'میکنه', 'ولی', 'توشو',
+          'خالی', 'میده'
+        ].
+      # .
+  }.
+}.
+
+#:language XFrozen
+
+describe TokenAnalyser do: {:it:let
+  it exists do: {
+    { TokenAnalyser. } should not raiseError: String.
+  }.
+
+  let[Reflect thisContext] lexer { Lexer }.
+  let[Reflect thisContext] analyser { TokenAnalyser with: lexer }.
+  let[Reflect thisContext] glblctx { Reflect thisContext }.
+
+  it can tokenise do: {:thisTest
+    var allTargetTexts is (
+      File
+        list: 'samples',
+        filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
+        fmap: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
+    ).
+    thisTest tests: 'Tokeniser'.
+    thisTest progressesUpTo: allTargetTexts count.
+    [allTokens, consolidated] is analyser
+      consolidateAll: allTargetTexts
+      pre: {:i thisTest progress: i + 1. }
+      post: { thisTest show. }.
+
+    allTokens should not = Nil.
+    consolidated should not = Nil.
+
+    let[glblctx] allTokens { allTokens }.
+    let[glblctx] consolidated { consolidated }.
+    let[glblctx] allTargetTexts { allTargetTexts }.
+  }.
+  it can calculate TF-IDF do: {:thisTest
+    thisTest tests: 'TF-IDF'.
+    thisTest progressesUpTo: allTokens count.
+    var consolidateAll is analyser
+      consolidate: consolidated
+      withTokens: allTokens
+      pre: {:i thisTest progress: i + 1. }
+      post: { thisTest show. }.
+    consolidateAll should not = Nil.
+
+    let[glblctx] consolidateAll { consolidateAll }.
+  }.
+  it can detect keywords do: {:thisTest
+    thisTest tests: 'Keyword detection'.
+    thisTest progressesUpTo: allTargetTexts count.
+    var keywords-for-docs is analyser
+      detectKeywords: consolidateAll
+      forDocuments: allTargetTexts
+      pre: {:i thisTest progress: i + 1. }
+      post: { thisTest show. }.
+    keywords-for-docs count should = allTargetTexts count.
+
+    var kfs is File new: 'keywords', open: 'w+'.
+    kfs write: (keywords-for-docs imap: \:i:x 'document $$i - %s (frq=%d)\n' % x, sum).
+    kfs close.
+  }.
+}.
