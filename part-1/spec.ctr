@@ -1,4 +1,4 @@
-Broom memoryLimit: 1024 * 1024 * 1024 * 4.
+Broom memoryLimit: 1024 * 1024 * 1024 * 12.
 
 import main: \*.
 import
@@ -52,14 +52,16 @@ describe TokenAnalyser do: {:it:let
   it can tokenise do: {:thisTest
     var allTargetTexts is (
       File
-        list: 'samples',
-        filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
-        fmap: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
+        new: 'orders', read split: '\n',
+        fmap: {\:name ['label', 'name', '_'] letEqual: (name split: ':') in: {
+          ^[label, (File new: name, read)].
+        }.}
+        # groupBy: \:x x head
     ).
     thisTest tests: 'Tokeniser'.
     thisTest progressesUpTo: allTargetTexts count.
     [allTokens, consolidated] is analyser
-      consolidateAll: allTargetTexts
+      consolidateAllWithLabels: allTargetTexts
       pre: {:i thisTest progress: i + 1. }
       post: { thisTest show. }.
 
@@ -70,30 +72,44 @@ describe TokenAnalyser do: {:it:let
     let[glblctx] consolidated { consolidated }.
     let[glblctx] allTargetTexts { allTargetTexts }.
   }.
-  it can calculate TF-IDF do: {:thisTest
+  it can calculate categorised TF-IDF do: {:thisTest
     thisTest tests: 'TF-IDF'.
     thisTest progressesUpTo: allTokens count.
-    var consolidateAll is analyser
-      consolidate: consolidated
+    var consolidateAll is analyser # We don't need TF-IDF, since there are only N categories
+      TFconsolidate: consolidated
       withTokens: allTokens
       pre: {:i thisTest progress: i + 1. }
       post: { thisTest show. }.
     consolidateAll should not = Nil.
+    File new: 'dists', write: (JSON serialize: consolidateAll).
 
     let[glblctx] consolidateAll { consolidateAll }.
   }.
   it can detect keywords do: {:thisTest
+    var suggestedKeywords is Map fromArray: (
+      File
+        new: 'checks', read split: '\n',
+        fmap: {\:x x split: ':'.}
+    ).
     thisTest tests: 'Keyword detection'.
-    thisTest progressesUpTo: allTargetTexts count.
+    # thisTest progressesUpTo: allTargetTexts count.
+    var kws is suggestedKeywords values.
+    Pen writeln: kws.
     var keywords-for-docs is analyser
-      detectKeywords: consolidateAll
-      forDocuments: allTargetTexts
+      listKeywords: consolidateAll
+      forDocuments: suggestedKeywords keys
+      forKeywords: kws
       pre: {:i thisTest progress: i + 1. }
       post: { thisTest show. }.
-    keywords-for-docs count should = allTargetTexts count.
+    keywords-for-docs count should = suggestedKeywords count.
 
-    var kfs is File new: 'keywords', open: 'w+'.
-    kfs write: (keywords-for-docs imap: \:i:x 'document $$i - %s (frq=%d)\n' % x, sum).
-    kfs close.
+    var maps is Map new.
+    var idx is -1.
+    suggestedKeywords each: {:k:i
+      var thisres is keywords-for-docs at: (idx +=: 1). # ordered at kw order
+      Pen writeln: thisres.
+      maps merge: (Map new put: thisres at: k) with: \:k:v [i, k last + v last].
+    }.
+    Pen writeln: maps.
   }.
 }.
