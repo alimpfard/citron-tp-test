@@ -1,5 +1,6 @@
 import
   Library/Data/Map
+  Library/Data/Array
   Library/Data/Set/HashSet: 'HashSet'.
 
 var Lexer is Object cnew: {
@@ -51,10 +52,24 @@ var TokenAnalyser is Object cnew: {
     }.
     ^[allTokens, consolidated].
   }.
+  on: 'consolidateAllWithLabels:pre:post:' do: {:self:allTargetTexts:pre:post
+    var consolidated is Array new fill: allTargetTexts count with: \:_ Map new: \:_ 0.
+    var allTokens is HashSet new.
+    allTargetTexts each: {:i:targetText
+      pre[i].
+      var label is targetText head.
+      self analyse: targetText last, each: {:k:v
+        consolidated at: i, put: [label, v] at: k.
+        allTokens add: k.
+      }.
+      post[i].
+    }.
+    ^[allTokens, consolidated].
+  }.
   on: 'consolidate:withTokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
     var consolidateAll is Array new fill: consolidated count with: Nil.
     var docs is Array new fill: consolidated count with: \:i i.
-    var ii is -1.
+    var ii is 0.
     allTokens toArray each_v: {:x
       pre[ii +=: 1].
       var tf is self
@@ -78,9 +93,30 @@ var TokenAnalyser is Object cnew: {
     }.
     ^consolidateAll.
   }.
+  on: 'TFconsolidate:withTokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
+    var consolidateAll is Map new.
+    var ii is 0.
+    allTokens toArray each_v: {:x
+      pre[ii +=: 1].
+      var tfsum is self
+        TF-of: consolidated
+        name: x,
+        groupBy: \:x x head,
+        kvmap: \:kv [kv head, (kv last fmap: \:x x last, sum)].
+      var cctfs is Map new.
+      tfsum each: {:k:v
+        cctfs put: v / tfsum count at: k.
+      }.
+      consolidateAll
+        put: cctfs
+        at: x.
+      post[ii].
+    }.
+    ^consolidateAll.
+  }.
   on: 'merge:tokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
     var consolidateAll is Map new.
-    var i is -1.
+    var i is 0.
     allTokens each_v: {:x
       pre[(i +=: 1)].
       consolidateAll
@@ -108,6 +144,19 @@ var TokenAnalyser is Object cnew: {
       ^kw.
     }.
   }.
+  on: 'listKeywords:forDocuments:forKeywords:pre:post:' do: {:consolidateAll:allTargetTexts:keywords:pre:post
+    var idx is 0.
+    ^allTargetTexts fmap: {:i
+      Pen writeln: [idx, i].
+      pre[idx +=: 1].
+      var kw is keywords fmap: {\:x
+        var val is consolidateAll @ x.
+        [x, val @ i].
+      }.
+      post[idx].
+      ^kw.
+    }.
+  }.
   on: 'prettyPrint:tokens:' do: {:resmap:tokens
     var res is tokens
       fmap: \:k '%:L\t| %s' % [',\t', (resmap at: k), k],
@@ -121,5 +170,16 @@ var TokenAnalyser is Object cnew: {
     op delete.
     op2 delete.
     ^ff.
+  }.
+}.
+
+
+Map on: 'merge:with:' do: {:self:other:blk
+  other each: {:k:v
+    self contains: k, ifTrue: {
+      self put: blk[self @ k, v] at: k.
+    } ifFalse: {
+      self put: v at: k.
+    }.
   }.
 }.
