@@ -139,7 +139,7 @@ var TokenAnalyser is Object cnew: {
     }.
     ^allTargetTexts imap: {:i
       pre[i].
-      var kw is max-with-idx[Generator elementsOf: consolidateAll, fmap: \:x x @ i].
+      var kw is max-with-idx[Generator elementsOf: consolidateAll, skip: 1, fmap: \:x x @ i].
       post[i].
       ^kw.
     }.
@@ -181,4 +181,7 @@ Map on: 'merge:with:' do: {:self:other:blk
       self put: v at: k.
     }.
   }.
+}.
+Generator on: 'skip:' do: {:self:times
+    times times: { self inext. }.
 }.
