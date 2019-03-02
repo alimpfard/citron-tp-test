@@ -7,7 +7,10 @@ Implementation of the lexer/analyser
 Lexer + TF
 
 #### [Part-1](part-1/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-1/spec.ctr)
-Lexer + TF-IDF + Keyword
+Lexer + TF-IDF of specific terms
+
+#### [Part-1-5](part-1-5/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-1-5/spec.ctr)
+Lexer + TF-IDF + Keyword detection
 
 #### [Part-2](part-2/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-2/spec.ctr)
 (todo) Lexer + TF-IDF + Keyword : test whether two words can be used as keywords for topics
