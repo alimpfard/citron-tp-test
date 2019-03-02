@@ -147,7 +147,6 @@ var TokenAnalyser is Object cnew: {
   on: 'listKeywords:forDocuments:forKeywords:pre:post:' do: {:consolidateAll:allTargetTexts:keywords:pre:post
     var idx is 0.
     ^allTargetTexts fmap: {:i
-      Pen writeln: [idx, i].
       pre[idx +=: 1].
       var kw is keywords fmap: {\:x
         var val is consolidateAll @ x.
