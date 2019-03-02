@@ -1,6 +1,4 @@
-Array ← 'گل' ; 'دارو'
-[0, 'sport']
-[1, 'medical']
-Array ← ['گل', 192] ; ['دارو', 1.3333333333]
-Array ← ['گل', 0.3333333333] ; ['دارو', 88.6666666667]
-(Map new) put:(Array ← ['گل', 0.3333333333] ; ['دارو', 88.6666666667]) at:'medical', put:(Array ← ['گل', 192] ; ['دارو', 1.3333333333]) at:'sport'
+Uncaught error has occurred.
+Parser error, unexpected end of program ( spec.ctr: 134)
+-> Expected a dot (.).
+

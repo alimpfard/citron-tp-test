@@ -94,7 +94,6 @@ describe TokenAnalyser do: {:it:let
     thisTest tests: 'Keyword detection'.
     # thisTest progressesUpTo: allTargetTexts count.
     var kws is suggestedKeywords values.
-    Pen writeln: kws.
     var keywords-for-docs is analyser
       listKeywords: consolidateAll
       forDocuments: suggestedKeywords keys
@@ -107,9 +106,9 @@ describe TokenAnalyser do: {:it:let
     var idx is -1.
     suggestedKeywords each: {:k:i
       var thisres is keywords-for-docs at: (idx +=: 1). # ordered at kw order
-      Pen writeln: thisres.
       maps merge: (Map new put: thisres at: k) with: \:k:v [i, k last + v last].
     }.
-    Pen writeln: maps.
+    maps is maps kvmap: \:x [x head, Map fromArray: x last].
+    Pen writeln: (JSON serialize: maps).
   }.
 }.
