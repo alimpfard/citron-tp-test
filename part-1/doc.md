@@ -20,3 +20,11 @@
     + They're detected in `isStopword` and filtered away in `analyse:`
 
 ### "categorised" TF-IDF
+    + A frequency matrix is first generated for Documents x Words
+    + Each document is tagged with its (known) label
+    + A selective TF is performed over the requested keywords
+    + The resulting TF rows are divided by the number of labels containing them, not the specific documents (ITF - Inverse Tag Frequency?)
+
+### Merging
+    + The resulting categorised TF-IDFs are merged back into a NxL matrix with a simple sum
+
