@@ -13,4 +13,4 @@ Lexer + TF-IDF of specific terms
 Lexer + TF-IDF + Keyword detection
 
 #### [Part-2](part-2/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-2/spec.ctr)
-(todo) Lexer + TF-IDF + Keyword : test whether two words can be used as keywords for topics
+(todo) Lexer + Named Entity Detection + TF-IDF 
