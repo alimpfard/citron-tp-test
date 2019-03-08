@@ -40,6 +40,12 @@ describe Lexer do: {:it:let
 
 #:language XFrozen
 
+HashMap on: 'toJSON' do: {:self
+  var kvs is Array new.
+  me each: {:k:v kvs push: ('"%s": %s' % [(k escape: '\n\r\t\f\v\a\'"'), (JSON serialize: v)]).}
+  ^'{%L}' % [kvs].
+}.
+
 describe TokenAnalyser do: {:it:let
   it exists do: {
     { TokenAnalyser. } should not raiseError: String.
@@ -96,8 +102,8 @@ describe TokenAnalyser do: {:it:let
     var kws is suggestedKeywords values.
     var keywords-for-docs is analyser
       listKeywords: consolidateAll
-      forDocuments: suggestedKeywords keys
       forKeywords: kws
+      andDocuments: suggestedKeywords keys
       pre: {:i thisTest progress: i + 1. }
       post: { thisTest show. }.
     keywords-for-docs count should = suggestedKeywords count.
@@ -109,6 +115,16 @@ describe TokenAnalyser do: {:it:let
       maps merge: (Map new put: thisres at: k) with: \:k:v [i, k last + v last].
     }.
     maps is maps kvmap: \:x [x head, Map fromArray: x last].
-    Pen writeln: (JSON serialize: maps).
+    var topics is suggestedKeywords keys.
+    var resultf is File new: 'out', open: 'w+'.
+    suggestedKeywords each: {:tp:kw
+      var sum is topics
+        fmap: \:x maps @ x @ kw,
+        foldl: {\:acc:x acc + x} accumulator: 0.
+      var kwval is maps @ tp @ kw or: 0.
+      resultf write: 'Confidence for $$kw in $$tp is ${{kwval / sum}}$\n'.
+    }.
+    resultf write: (JSON serialize: maps).
+    resultf close.
   }.
 }.

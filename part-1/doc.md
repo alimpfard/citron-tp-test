@@ -28,3 +28,5 @@
 ### Merging
     + The resulting categorised TF-IDFs are merged back into a NxL matrix with a simple sum
 
+### Evaluation
+    + A sum pass is performed on the merged matrix and a confidence value is calculated

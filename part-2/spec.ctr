@@ -59,39 +59,38 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] analyser { TokenAnalyser with: lexer }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
   let[Reflect thisContext] outfile { File new: 'outfile', open: 'w+' }.
-  let[Reflect thisContext] testfile { File new: 'testfile', open: 'r' }.
+  # let[Reflect thisContext] testfile { File new: 'testfile', open: 'r' }.
 
-  it can tokenise do: {:thisTest
+  it can tokenise and tag entities do: {:thisTest
     var allTargetTexts is (
       File
         list: 'samples',
         filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
-        fmap: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
+        fmap: \:descr (File new: 'samples/' + (descr @ 'file'), read)
     ).
-    thisTest tests: 'Tokeniser'.
-    thisTest progressesUpTo: allTargetTexts count.
-    [allTokens, consolidated] is analyser
-      consolidateAll: allTargetTexts
-      pre: {:i thisTest progress: i + 1. }
-      post: { thisTest show. }.
+    
+    thisTest tests: 'Token Tagging'.
+    var consolidated is allTargetTexts fmap: {:targetText
+        ^analyser
+            tag: targetText
+            pre: {:i thisTest progress: i + 1. }
+            post: { thisTest show. }.
+    }.
 
-    allTokens should not = Nil.
-    consolidated should not = Nil.
-
-    thisTest tests: 'TF'.
-    thisTest progressesUpTo: allTokens count.
-    consolidated is analyser
-      merge: consolidated
-      tokens: allTokens
-      pre: {:i thisTest progress: i + 1. }
-      post: { thisTest show. }.
+    consolidated is analyser 
+        tagPhrases: consolidated
+        pre: {:i thisTest progress: i + 1. }
+        post: { thisTest show. }.
 
     consolidated should not = Nil.
+    # Pen writeln: consolidated.
 
     #{
       outfile write: (
-        analyser prettyPrint: consolidated tokens: allTokens toArray
+        #analyser prettyPrint: consolidated tokens: allTokens toArray
+        consolidated fmap: (\:x x join: '\t\n'), join: '\n'
       ).
     #} should output: testfile read to: outfile.
   }.
+
 }.

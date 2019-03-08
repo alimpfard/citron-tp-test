@@ -1,4 +1,5 @@
-Broom memoryLimit: 1024 * 1024 * 1024 * 4.
+Broom memoryLimit: 1024 * 1024 * 1024 * 8.
+Broom autoAlloc: True.
 
 import main: \*.
 import
@@ -48,40 +49,46 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] lexer { Lexer }.
   let[Reflect thisContext] analyser { TokenAnalyser with: lexer }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
+  let[Reflect thisContext] consolidateAll { Nil }.
+  let[Reflect thisContext] appearsIn { Nil }.
+  let[Reflect thisContext] allTargetTexts { Nil }.
 
   it can tokenise do: {:thisTest
-    var allTargetTexts is (
+    allTargetTexts is (
       File
         list: 'samples',
-        filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
-        fmap: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
+        filter: (\:_:descr (descr @ 'file' startsWith: 'sample')),
+        from: 0 length: 600,
+        fmap!: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
     ).
     thisTest tests: 'Tokeniser'.
     thisTest progressesUpTo: allTargetTexts count.
-    [allTokens, consolidated] is analyser
-      consolidateAll: allTargetTexts
-      pre: {:i thisTest progress: i + 1. }
+
+    var res is analyser
+      consolidate: allTargetTexts
+      pre: {:i thisTest progress: i. }
       post: { thisTest show. }.
 
-    allTokens should not = Nil.
-    consolidated should not = Nil.
-
-    let[glblctx] allTokens { allTokens }.
-    let[glblctx] consolidated { consolidated }.
-    let[glblctx] allTargetTexts { allTargetTexts }.
+    consolidateAll is res @ 0.
+    appearsIn is res @ 1.
   }.
+
   it can calculate TF-IDF do: {:thisTest
     thisTest tests: 'TF-IDF'.
-    thisTest progressesUpTo: allTokens count.
-    var consolidateAll is analyser
-      consolidate: consolidated
-      withTokens: allTokens
-      pre: {:i thisTest progress: i + 1. }
-      post: { thisTest show. }.
-    consolidateAll should not = Nil.
-
-    let[glblctx] consolidateAll { consolidateAll }.
+    thisTest progressesUpTo: consolidateAll count.
+    analyser
+      calculateTF-IDF: consolidateAll
+      withMap: appearsIn
+      pre: {:i thisTest progress: i. }
+      post: { thisTest show. }
+    .
+    # var outf is File new: 'tfidf', open: 'w+'.
+    # consolidateAll each: {:k:v
+    #   outf write: '%s -- %:L\n' % [k, ',\t', v].
+    # }.
+    # outf close.
   }.
+
   it can detect keywords do: {:thisTest
     thisTest tests: 'Keyword detection'.
     thisTest progressesUpTo: allTargetTexts count.
@@ -90,7 +97,8 @@ describe TokenAnalyser do: {:it:let
       forDocuments: allTargetTexts
       pre: {:i thisTest progress: i + 1. }
       post: { thisTest show. }.
-    keywords-for-docs count should = allTargetTexts count.
+
+    Pen writeln: keywords-for-docs.
 
     var kfs is File new: 'keywords', open: 'w+'.
     kfs write: (keywords-for-docs imap: \:i:x 'document $$i - %s (frq=%d)\n' % x, sum).

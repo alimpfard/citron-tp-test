@@ -1,0 +1,32 @@
+var PoolExecutor is Object cnew: {
+    count => 8.
+    on: 'init' do: {
+        pool => Array new fill: my count with: \:i i. 
+    }, init.
+
+    on: 'process:function:stepFun:' do: {:arr:blk:step
+        var res is Array new.
+        var iidx is -1.
+        var pool is my pool.
+        var poolcount is my count.
+        arr each: {:idx:v
+            pool put: (Program new: {
+                var resv is blk[idx, v].
+                ^[resv].
+            }) at: (iidx +=: 1).
+            iidx = (poolcount - 1) ifTrue: {
+                Pen writeln: 'pool filled at idx $$idx'.
+                pool fmap!: {:i
+                    var t is i join.
+                    res push: t head.
+                    ^Nil.
+                }.
+                iidx is -1.
+                step[idx].
+            }.
+        }.
+        pool fmap!: {:i i isNil ifFalse: { res push: i join head. ^Nil. }. ^i.}.
+        ^res.
+    }.
+}.
+

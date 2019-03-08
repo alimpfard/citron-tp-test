@@ -56,7 +56,7 @@ describe TokenAnalyser do: {:it:let
       File
         list: 'samples',
         filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
-        fmap: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
+        fmap!: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
     ).
     thisTest tests: 'Tokeniser'.
     thisTest progressesUpTo: allTargetTexts count.
@@ -78,10 +78,10 @@ describe TokenAnalyser do: {:it:let
 
     consolidated should not = Nil.
 
-    {
+    #{
       outfile write: (
         analyser prettyPrint: consolidated tokens: allTokens toArray
       ).
-    } should output: testfile read to: outfile.
+    #} should output: testfile read to: outfile.
   }.
 }.

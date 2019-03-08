@@ -1,18 +1,38 @@
 import
+  Library/Data/SwitchCase
   Library/Data/Map
   Library/Data/Array
   Library/Data/Set/HashSet: 'HashSet'.
 
+#:language XFrozen
+
 var Lexer is Object cnew: {
+  collate => False.
+  collateList => Nil.
+  collateReg => Nil.
+  fReg => String compileRegex: ?>s/[\[\]\{\}،.,:;'"»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321۰۹۸۷۶۵۴۳۲۱\`]|[\p{L}\p{N}\d-[\[\]\{\}،\.,:;'"i»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321۰۹۸۷۶۵۴۳۲۱\`]]+/ $0 /gmuW<?.
+  on: 'collate:' do: {:list
+    my collate is True.
+    my collateList is list.
+    my collateReg is list copy fmap!: {\:x
+        String compileRegex: 's/%s/%s/gmuW' % x.
+    }.
+  }.
   on: 'split:' do: {:str
+    my collate ifTrue: {
+        str is my collateReg foldl: {\:acc:x
+            acc ~ x.
+        } accumulator: str.
+    }.
     str is str replace: '\n' with: ' ', replace: '\t' with: ' '.
-    str is str ~ ?>s/[،.,:;'"\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321\`]|[\p{L}\p{N}\d-[،\.,:;'"\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321\`]]+/ $0 /gmuW<?.
-    str is str split: ' ', filter: \:_:x x length > 0.
+    str is str ~ my fReg.
+    str is str reSplit: '\\s+'.#, filter: \:_:x x empty not.
     ^str.
   }.
 }.
 
-var isPunctuation is \:x (x ~ ?>s/[‌‎،\.,:;'"\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321\`\s*]//gmuW<?) length = 0.
+var puncReg is String compileRegex: ?>s/[‌‎\[\]\{\}،\.,:;'"»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-\`\s*0-9۰-۹]//gmuW<?.
+var isPunctuation is \:x (x ~ puncReg) empty.
 var stopwords is HashSet addAll: (File new: 'stopwords/persian', read split: '\n').
 var isStopword is \:x stopwords contains: x.
 
@@ -21,23 +41,225 @@ var TokenAnalyser is Object cnew: {
 
   on: 'analyse:' do: {:text
     var resmap is Map new.
-    var incrOrInsert is {\:key
-      resmap contains: key, ifTrue: {
-        resmap at: key, +=: 1.
-      } ifFalse: {
-        resmap put: 1 at: key.
+    my lexer
+      split: text,
+      each_v: {:x
+        isStopword[x] not & isPunctuation[x] not ifTrue: {
+          (var &val is resmap at: x) isNil ifTrue: {
+            resmap put: 1 at: x.
+          } ifFalse: {
+            val +=: 1.
+          }.
+        }.
       }.
-    }.
-    var split is my lexer split: text, filter: \:_:x isStopword[x] not & isPunctuation[x] not.
-    split each_v: incrOrInsert.
     ^resmap.
   }.
-  on: 'TF-of:name:' do: {:from:name
-      ^from fmap: \:x x @ name.
+  on: 'split:' do: {:text
+    ^my lexer split: text.
   }.
-  on: 'TF:IDF-of:index:name:' do: {:res:from:idx:name
-    # var res is from fmap: \:x x @ name.
-    ^from @ idx @ name / (res filter: \:x x, count).
+  on: 'isRemovalCandidate:' do: {:x
+    isStopword[x] ifTrue: { ^True. }.
+    isPunctuation[x] ifTrue: { ^True. }.
+    ^False.
+  }.
+  on: 'tag:pre:post:' do: {:text:pre:post
+    var split is my lexer split: text. #, filter: \:_:x isStopword[x] not.
+
+    var i is 0.
+    ^split fmap!: {:tok
+        pre[i +=: 1].
+        tok containsPattern: '^[۰۹۸۷۶۵۴۳۲۱0987654321]+$', ifTrue: {
+            post[i].
+            ^[tok, 'num'].
+        }.
+        tok containsPattern: '^\\#$', ifTrue: {
+            post[i].
+            ^[tok, 'octothorp'].
+        }.
+        post[i].
+        ^[tok, 'str'].
+    }.
+  }.
+  on: 'tagPhrases:pre:post:' do: {:dtoks:pre:post
+    frozen float-separators is ['.'].
+    ^dtoks fmap: {:toks
+        var state is \nothing.
+        var tokbuf is Array new.
+        var i is 0.
+        var avail is toks count.
+        var processed is Array new.
+        var rejected is Nil.
+
+        {^i < avail.} whileTrue: {
+           var tok is toks at: i.
+
+           var newstate is (frozen state-check is Object
+            case: \nothing do: {
+                ^(frozen top-check is String
+                    case: 'str' do: {
+                        tokbuf push: tok @ 0.
+                        ^\accept.
+                    },
+                    case: 'num' do: {
+                        tokbuf push: tok @ 0.
+                        ^\int.
+                    },
+                    case: 'octothorp' do: {
+                        tokbuf push: tok @ 0.
+                        ^\hashtag0.
+                    })
+                switch: tok @ 1.
+            },
+            case: \int do: {
+                ^(frozen num-check is String
+                    case: 'str' do: {
+                        float-separators contains: tok @ 0, ifTrue: {
+                            tokbuf push: '.'.
+                            ^\float.
+                        } ifFalse: {
+                            i -=: 1. # putback the token
+                            ^\accept.
+                        }.
+                    },
+                    case: 'num' do: {
+                        tokbuf push: tok @ 0.
+                        ^\int.
+                    },
+                    default: {
+                        i -=: 1.
+                        ^\accept.
+                    })
+                switch: tok @ 1.
+            },
+            case: \float do: {
+                ^(frozen num-check is String
+                    case: 'str' do: {
+                        float-separators contains: tok @ 0, ifTrue: {
+                            tok indexOf: '.', > 3 ifTrue: {
+                                # not an IP address
+                                i -=: 1.
+                                ^\accept.
+                            } ifFalse: {
+                                (rejected = \ipaddr1) | (rejected = \ipaddr) ifTrue: {
+                                    i -=: 1.
+                                    ^\accept.
+                                }.
+                                tokbuf push: '.'.
+                                ^\ipaddr.
+                            }.
+                        } ifFalse: {
+                            i -=: 1. # putback the token
+                            ^\accept.
+                        }.
+                    },
+                    case: 'num' do: {
+                        tokbuf push: tok @ 0.
+                        ^\float.
+                    },
+                    default: {
+                        i -=: 1.
+                        ^\accept.
+                    })
+                switch: tok @ 1.
+            },
+            case: \hashtag0 do: {
+                tokbuf push: tok @ 0.
+                ^\hashtag1.
+            },
+            case: \hashtag1 do: {
+                ^(frozen tag-check is String
+                    case: 'str' do: {
+                        tok @ 0 = '_' ifTrue: {
+                            tokbuf push: tok @ 0.
+                            ^\hashtag1.
+                        } ifFalse: {
+                            i -=: 1.
+                            ^\accept.
+                        }.
+                    },
+                    case: 'num' do: {
+                        tokbuf push: tok @ 0.
+                        ^\hashtag1.
+                    },
+                    default: {
+                        i -=: 1.
+                        ^\accept.
+                    })
+                switch: tok @ 1.
+            },
+            case: \ipaddr do: {
+                # I . I . <here> [I . I]
+                ^(frozen tag-check is String
+                    case: 'str' do: {
+                        tok @ 0 = '.' ifTrue: {
+                            tokbuf push: tok @ 0.
+                            ^\ipaddr1.
+                        } ifFalse: {
+                            i -=: tokbuf count.
+                            ^\reject.
+                        }.
+                    },
+                    case: 'num' do: {
+                        rejected = \ipaddr ifTrue: {
+                            i -=: tokbuf count.
+                            ^\reject.
+                        }.
+                        tokbuf push: tok @ 0.
+                        ^\ipaddr.
+                    },
+                    default: {
+                        rejected = \ipaddr ifTrue: {
+                            i -=: tokbuf count.
+                            ^\reject.
+                        }.
+                        i -=: 1.
+                        ^\accept.
+                    })
+                switch: tok @ 1.
+            },
+            case: \ipaddr1 do: {
+                # I . I . I . <here> [I]
+                ^(frozen tag-check is String
+                    case: 'num' do: {
+                        rejected = \ipaddr1 ifTrue: {
+                            i -=: tokbuf count.
+                            ^\reject.
+                        }.
+                        tokbuf push: tok @ 0.
+                        ^\accept.
+                    },
+                    default: {
+                        i -=: tokbuf count.
+                        ^\reject.
+                    })
+                switch: tok @ 1.
+            },
+            default: {
+                thisBlock error: 'unknown state $$state encountered'.
+            }) switch: state.
+            i +=: 1.
+            newstate = \accept ifTrue: {
+                processed push: [(tokbuf join: ''), (state toString skip: 1)].
+
+                tokbuf is Array new.
+                state is \nothing.
+            } ifFalse: {
+                newstate = \reject ifTrue: {
+
+                    rejected is state.
+                    state is \nothing.
+                } ifFalse: {
+
+                    state is newstate.
+                }.
+            }.
+        }.
+        ^processed.
+    }.
+}.
+
+  on: 'TF-of:name:' do: {:from:name
+      ^from copy fmap!: \:x x @ name.
   }.
   on: 'consolidateAll:pre:post:' do: {:self:allTargetTexts:pre:post
     var consolidated is Array new fill: allTargetTexts count with: \:_ Map new: \:_ 0.
@@ -50,7 +272,7 @@ var TokenAnalyser is Object cnew: {
       }.
       post[i].
     }.
-    ^[allTokens, consolidated].
+    ^Array < allTokens ; consolidated.
   }.
   on: 'consolidateAllWithLabels:pre:post:' do: {:self:allTargetTexts:pre:post
     var consolidated is Array new fill: allTargetTexts count with: \:_ Map new: \:_ 0.
@@ -66,43 +288,16 @@ var TokenAnalyser is Object cnew: {
     }.
     ^[allTokens, consolidated].
   }.
-  on: 'consolidate:withTokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
-    var consolidateAll is Array new fill: consolidated count with: Nil.
-    var docs is Array new fill: consolidated count with: \:i i.
-    var ii is 0.
-    allTokens toArray each_v: {:x
-      pre[ii +=: 1].
-      var tf is self
-        TF-of: consolidated
-        name: x
-      .
-      consolidateAll
-        put: (
-          docs fmap: \:i [
-            x,
-            (self
-              TF: tf
-              IDF-of: consolidated
-              index: i
-              name: x
-            )
-          ]
-        )
-        at: ii.
-      post[ii].
-    }.
-    ^consolidateAll.
-  }.
   on: 'TFconsolidate:withTokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
     var consolidateAll is Map new.
     var ii is 0.
-    allTokens toArray each_v: {:x
+    allTokens each_v: {:x
       pre[ii +=: 1].
       var tfsum is self
         TF-of: consolidated
         name: x,
         groupBy: \:x x head,
-        kvmap: \:kv [kv head, (kv last fmap: \:x x last, sum)].
+        fmap!: \:k:v v fmap!: \:x x last, sum.
       var cctfs is Map new.
       tfsum each: {:k:v
         cctfs put: v / tfsum count at: k.
@@ -113,6 +308,52 @@ var TokenAnalyser is Object cnew: {
       post[ii].
     }.
     ^consolidateAll.
+  }.
+  on: 'consolidate:pre:post:' do: {:self:allTargetTexts:pre:post
+    var consolidateAll is HashMap new.
+    var appearsIn is Map new.
+    var ii is -1.
+    var targetCount is allTargetTexts count.
+    var defTokEntry is [(x = 0) toNumber,, (x: (Generator from: 0 to: targetCount + 1))].
+    var tEstimate is 2.
+    allTargetTexts each: {:idx:targetText
+      idx mod: 5, ifFalse: {
+        pre[idx].
+        post[idx].
+      }.
+      var tIdx is idx + 1.
+      var tArrIdx is Array new: tEstimate * 2, push: tIdx.
+      self split: targetText last, each_v: {:tok
+        self isRemovalCandidate: tok, continue. #50 - 90
+        (var &tokEntry is consolidateAll at: tok) isNil ifTrue: {
+          tokEntry is defTokEntry copy fmap!: \:x x.
+          appearsIn put: tArrIdx copy at: tok.
+          tokEntry @ tIdx +=: 1.
+          tokEntry @ 1 +=: 1.
+          consolidateAll put: tokEntry at: tok.
+        } ifFalse: {
+          tokEntry @ 0 +=: 1.
+          (var &tokVal is tokEntry @ tIdx) ifFalse: {
+            tokEntry @ 1 +=: 1.
+            appearsIn @ tok push: tIdx.
+            tEstimate +=: 1.
+          }.
+          tokVal +=: 1.
+        }.
+      }.
+      tEstimate /=: 2.
+    }.
+    ^[consolidateAll, appearsIn].
+  }.
+  on: 'calculateTF-IDF:withMap:pre:post:' do: {:consolidateAll:appearsIn:pre:post
+    var ii is -1.
+    consolidateAll each: {:k:v
+      pre[ii +=: 1].
+      post[ii].
+      appearsIn at: k, each_v: {:i
+        v @ i /=: v @ 1.
+      }.
+    }.
   }.
   on: 'merge:tokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
     var consolidateAll is Map new.
@@ -130,27 +371,34 @@ var TokenAnalyser is Object cnew: {
     }.
     ^consolidateAll.
   }.
-  on: 'detectKeywords:forDocuments:pre:post:' do: {:consolidateAll:allTargetTexts:pre:post
-    var max-with-idx is {:what
+  on: 'detectKeywords:forDocuments:pre:post:' do: {:consolidateAll:docs:pre:post
+    var max-with-idx is {:what:vidx
       var idx is 0.
       var max is 0.
-      what each: {:i:x x last > max ifTrue: { idx is x head. max is x last. }. }.
+      what each: {:i:x
+        x is x @ vidx.
+        x > max ifTrue: {
+          idx is i.
+          max is x.
+        }.
+      }.
       ^[idx, max].
     }.
-    ^allTargetTexts imap: {:i
-      pre[i].
-      var kw is max-with-idx[Generator elementsOf: consolidateAll, skip: 1, fmap: \:x x @ i].
-      post[i].
+    var idx is -1.
+    ^docs imap: {:i
+      pre[idx +=: 1].
+      var kw is max-with-idx[consolidateAll, i + 1].
+      post[idx].
       ^kw.
     }.
   }.
-  on: 'listKeywords:forDocuments:forKeywords:pre:post:' do: {:consolidateAll:allTargetTexts:keywords:pre:post
+  on: 'listKeywords:forKeywords:andDocuments:pre:post:' do: {:consolidateAll:keywords:docs:pre:post
     var idx is 0.
-    ^allTargetTexts fmap: {:i
+    ^docs fmap: {:i
       pre[idx +=: 1].
-      var kw is keywords fmap: {\:x
+      var kw is keywords fmap: {:x
         var val is consolidateAll @ x.
-        [x, val @ i].
+        ^[x, val @ i].
       }.
       post[idx].
       ^kw.
