@@ -1,0 +1,3 @@
+Confidence for دکتر in sport is 0
+Confidence for دارو in medical is 1
+{"medical": {"دارو": 44.5, "دکتر": 31.5}, "sport": {"دارو": null, "دکتر": null}}

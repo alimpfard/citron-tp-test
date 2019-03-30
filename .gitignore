@@ -1,3 +1,4 @@
 selection/consolidate*
 **/sample*
 commons/selection/*/sample*
+perf-hash

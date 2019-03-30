@@ -18,15 +18,15 @@ var Lexer is Object cnew: {
         String compileRegex: 's/%s/%s/gmuW' % x.
     }.
   }.
-  on: 'normalise:' do: {:&str
-    str is my collateReg foldl: {:acc:x
-      ^acc ~ x.
+  on: 'normalise:' do: {:str
+    str is my collateReg foldl: {\:acc:x
+        acc ~ x.
     } accumulator: str.
     ^str.
   }.
-  on: 'split:' do: {:self:str
+  on: 'split:' do: {:str
     my collate ifTrue: {
-      str is self normalise: str.
+        str is normalise: str.
     }.
     str is str replace: '\n' with: ' ', replace: '\t' with: ' '.
     str is str ~ my fReg.
@@ -43,7 +43,7 @@ var TokenAnalyser is Object cnew: {
   on: 'with:' do: {:lexer ^cnew: { lexer => lexer. }. }.
 
   on: 'analyse:' do: {:text
-    var resmap is Map new.
+    var resmap is Map new. 
     var stopwords is my stopwords is HashSet new addAll: (my lexer normalise: (File new: 'stopwords/persian', read), split: '\n').
     my lexer
       split: text,
@@ -378,7 +378,7 @@ var TokenAnalyser is Object cnew: {
   }.
   on: 'detectKeywords:forDocuments:pre:post:' do: {:consolidateAll:docs:pre:post
     var max-with-idx is {:what:vidx
-      var idx is Array < '' ; '' ; '' ; '' ; ''.
+      var idx is Array < '' ; '' ; '' ; '' ; ''. 
       var max is Array < 0 ; 0 ; 0 ; 0 ; 0.
       what each: {:i:x
         x is x @ vidx.
