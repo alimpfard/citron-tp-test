@@ -10,7 +10,7 @@ var Lexer is Object cnew: {
   collate => False.
   collateList => Nil.
   collateReg => Nil.
-  fReg => String compileRegex: ?>s/[\[\]\{\}،.,:;'"»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321۰۹۸۷۶۵۴۳۲۱\`]|[\p{L}\p{N}\d-[\[\]\{\}،\.,:;'"i»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321۰۹۸۷۶۵۴۳۲۱\`]]+/ $0 /gmuW<?.
+  fReg => String compileRegex: ?>s/[\[\]\{\}\/\?،\.,:;'"»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321۰۹۸۷۶۵۴۳۲۱\`]|[\p{L}\p{N}\d-[\[\]\{\}\/\?،\.,:;'"i»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-0987654321۰۹۸۷۶۵۴۳۲۱\`]]+/ $0 /gmuW<?.
   on: 'collate:' do: {:list
     my collate is True.
     my collateList is list.
@@ -35,7 +35,7 @@ var Lexer is Object cnew: {
   }.
 }.
 
-var puncReg is String compileRegex: ?>s/[‌‎\[\]\{\}،\.,:;'"»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-\`\s*0-9۰-۹]//gmuW<?.
+var puncReg is String compileRegex: ?>s/[‌‎\[\]\{\}،\/\?\.,:;'"»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-\`\s*0-9۰-۹]//gmuW<?.
 var isPunctuation is \:x (x ~ puncReg) empty.
 var isStopword is \:ss:x ss contains: x.
 
@@ -350,6 +350,43 @@ var TokenAnalyser is Object cnew: {
     }.
     ^[consolidateAll, appearsIn].
   }.
+
+  on: 'SWconsolidate:pre:post:' do: {:self:allTargetTexts:pre:post
+    var consolidateAll is HashMap new.
+    var appearsIn is Map new.
+    var ii is -1.
+    var targetCount is allTargetTexts count.
+    var defTokEntry is [(x = 0) toNumber,, (x: (Generator from: 0 to: targetCount + 1))].
+    var tEstimate is 2.
+    allTargetTexts each: {:idx:targetText
+      idx mod: 5, ifFalse: {
+        pre[idx].
+        post[idx].
+      }.
+      var tIdx is idx + 1.
+      var tArrIdx is Array new: tEstimate * 2, push: tIdx.
+      self split: targetText last, each_v: {:tok
+        (var &tokEntry is consolidateAll at: tok) isNil ifTrue: {
+          tokEntry is defTokEntry copy fmap!: \:x x.
+          appearsIn put: tArrIdx copy at: tok.
+          tokEntry @ tIdx +=: 1.
+          tokEntry @ 1 +=: 1.
+          consolidateAll put: tokEntry at: tok.
+        } ifFalse: {
+          tokEntry @ 0 +=: 1.
+          (var &tokVal is tokEntry @ tIdx) ifFalse: {
+            tokEntry @ 1 +=: 1.
+            appearsIn @ tok push: tIdx.
+            tEstimate +=: 1.
+          }.
+          tokVal +=: 1.
+        }.
+      }.
+      tEstimate /=: 2.
+    }.
+    ^[consolidateAll, appearsIn].
+  }.
+
   on: 'calculateTF-IDF:withMap:pre:post:' do: {:consolidateAll:appearsIn:pre:post
     var ii is -1.
     consolidateAll each: {:k:v
@@ -360,6 +397,31 @@ var TokenAnalyser is Object cnew: {
       }.
     }.
   }.
+
+  # Normalisation loses us the scale
+  # so we just don't normalise since
+  # we use RSD, and that only works
+  # properly on absolute units
+  on: 'calculateRSD:withMap:pre:post:' do: {:consolidateAll:appearsIn:pre:post
+    var ii is -1.
+    # var maxTFs is consolidateAll fmap: \:k consolidateAll at: k, max.
+    # var maxDF is consolidateAll fmap: \:k consolidateAll @ k @ 1, values max.
+    consolidateAll each: {:k:v
+      pre[ii +=: 0.5].
+      post[ii].
+      appearsIn at: k, each_v: {:i
+        # v @ i /=: (maxTFs @ k) / (v @ 1 / maxDF).
+        v @ i *=: v @ 1.
+      }.
+    }.
+    ^consolidateAll fmap: {:k
+      var v is consolidateAll at: k.
+      pre[ii +=: 0.5].
+      post[ii].
+      ^v from: 0 length: v count, relativeStandardDeviation.
+    }.
+  }.
+
   on: 'merge:tokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
     var consolidateAll is Map new.
     var i is 0.
@@ -428,6 +490,18 @@ var TokenAnalyser is Object cnew: {
   }.
 }.
 
+# StdDev/mean
+# with mean->0, this is really sensitive
+Array on: 'relativeStandardDeviation' do: {
+  var sums is Generator elementsOf: me, fmap: {\:x
+    ^[x, x pow: 2].
+  }, foldl: {\:acc:x
+    ^[acc head + x head, acc last + x last].
+  } accumulator: [0, 0].
+  var mean is sums head / me count.
+  var variance is (sums last / me count) - (mean * mean).
+  ^variance sqrt / mean.
+}.
 
 Map on: 'merge:with:' do: {:self:other:blk
   other each: {:k:v
@@ -440,4 +514,18 @@ Map on: 'merge:with:' do: {:self:other:blk
 }.
 Generator on: 'skip:' do: {:self:times
     times times: { self inext. }.
+}.
+
+# Interleaves two generators to run at the same pace~
+Generator on: 'interleaveWith:' do: {:other
+  ^me copy fmap: \:x [x, other next].
+}.
+
+
+HashMap on: 'values' do: {
+  var arr is Array new: me count.
+  me each: {:_:v
+    arr push: v.
+  }.
+  ^arr.
 }.
