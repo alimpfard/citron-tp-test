@@ -56,19 +56,21 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] analyser { TokenAnalyser with: lexer }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
   let[Reflect thisContext] consolidateAll { Nil }.
-  let[Reflect thisContext] appearsIn { Nil }.
+  let[Reflect thisContext] DFconsAll { Nil }.
+  let[Reflect thisContext] tokenMap { Nil }.
   let[Reflect thisContext] allTargetTexts { Nil }.
+  let[Reflect thisContext] sliceCount { 2000 }.
 
   it can tokenise do: {:thisTest
     allTargetTexts is (
       File
         list: 'samples',
         filter: (\:_:descr (descr @ 'file' startsWith: 'sample')),
-        from: 0 length: 100,
-        fmap!: \:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)]
+        from: 0 length: sliceCount, asGenerator
+        fmap: {\:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)].}
     ).
     thisTest tests: 'Tokeniser'.
-    thisTest progressesUpTo: allTargetTexts count.
+    thisTest progressesUpTo: sliceCount.
 
     var res is analyser
       SWconsolidate: allTargetTexts
@@ -76,26 +78,31 @@ describe TokenAnalyser do: {:it:let
       post: { thisTest show. }.
 
     consolidateAll is res @ 0.
-    appearsIn is res @ 1.
+    DFconsAll is res @ 1.
+    tokenMap is res @ 2.
+
+    # consolidateAll display.
+    # DFconsAll display.
   }.
 
-  it can calculate RSD do: {:thisTest
+  it can calculate rsd do: {:thisTest
     thisTest tests: 'Relative Standard Deviation'.
-    thisTest progressesUpTo: consolidateAll count.
+    var size is consolidateAll size.
+    thisTest progressesUpTo: size head.
     var rsd is analyser
       calculateRSD: consolidateAll
-      withMap: appearsIn
+      withMap: tokenMap
+      andDFVector: DFconsAll
       pre: {:i thisTest progress: i. }
       post: { thisTest show. }
     .
-    # RSD for each token determines
-    # how common it is to the whole dataset
+
     let[glblctx] rsd { rsd }.
 
     # dump rsd for inspection
     var fs is File new: 'rsd', open: 'w+'.
     rsd each: {:k:v
-      fs write: '${{k}}$\t${{v}}$\n'.
+      fs write: '${{tokenMap bat: k}}$\t${{v}}$\n'.
     }.
     fs close.
   }.
@@ -103,7 +110,7 @@ describe TokenAnalyser do: {:it:let
   it can detect stopwords do: {:thisTest
     thisTest tests: 'Stopword detection'.
     var kfs is File new: 'gen-stopwords', open: 'w+'.
-    kfs write: '%:L' % ['\n', (rsd fmap: \:x [rsd @ x, x], values sort: {:x:y ^x head > y head.}, take: 300, fmap!: \:x x last)].
+    kfs write: '%:L' % ['\n', (rsd imap: \:i:x [x, i], sort: {:x:y ^x head > y head.}, take: 300, fmap!: \:x tokenMap bat: x last)].
     kfs close.
   }.
 }.

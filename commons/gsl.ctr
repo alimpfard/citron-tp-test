@@ -1,0 +1,239 @@
+import
+  Library/Foreign/Interop/C.
+
+Inject
+  importFunctionsOrTypes: [
+    # 'gsl_spmatrix',
+    'GSL_SPMATRIX_TRIPLET', 'GSL_SPMATRIX_CCS', 'GSL_SPMATRIX_CRS',
+    'gsl_spmatrix_alloc_nzmax', 'gsl_spmatrix_realloc', 'gsl_spmatrix_free',
+    'gsl_spmatrix_set', 'gsl_spmatrix_get', 'gsl_spmatrix_ptr', 'gsl_spmatrix_scale',
+    'gsl_spmatrix_fprintf', 'gsl_spmatrix_ccs',
+    # misc
+    'gsl_set_error_handler_off', 'gsl_set_error_handler',
+    # stats
+    'gsl_stats_mean', 'gsl_stats_sd_m',
+    # vector
+    'gsl_vector_alloc', 'gsl_vector_calloc', 'gsl_vector_free',
+    'gsl_vector_get', 'gsl_vector_set', 'gsl_vector_ptr',
+    'gsl_vector_set_zero',
+    # libc
+    'malloc', 'free'
+  ]
+  fromHeaders: ['string.h', 'gsl/gsl_spmatrix.h', 'gsl/gsl_statistics.h', 'gsl/gsl_vector.h']
+  andLibraries: ['gslcblas', 'gsl', 'm']
+.
+
+CodeBlock on: '&symbol' do: { ^my symbol[]. }.
+
+#:language XNakedAsmBlock,XFrozen
+
+var gsl_getsize1 is {asm :int (={rax},r)
+  movq ($1), %rax
+}.
+var gsl_getsize2 is {asm :int (={rax},r)
+  movq 8($1), %rax
+}.
+
+var gsl_spmatrix_incr_el is {asm :int (=&{rax},r)
+  movsd   LC0(%rip), %xmm0
+  addsd   ($1), %xmm0
+  movsd   %xmm0, ($1)
+  jmp     end
+LC0:
+  .long   0
+  .long   1072693248
+end:
+}.
+
+var gsl_spmatrix_row is {asm :int :int :int intel (=&{rax},{rdi},{rsi},{rdx})
+  # int3
+  mov    rcx,QWORD PTR [rdi+0x30]
+  test   rcx,rcx
+  je     l71
+  mov    r8,QWORD PTR [rdi+0x10]
+  movsxd rdx,edx
+  shl    rcx,0x3
+  xor    eax,eax
+l32:
+  nop    WORD PTR cs:[rax+rax*1+0x0]
+  cmp    QWORD PTR [r8+rax*1],rdx
+  jne    l62
+  mov    r9,QWORD PTR [rdi+0x18]
+  movsd  xmm0,QWORD PTR [r9+rax*1]
+  mov    r9,QWORD PTR [rdi+0x20]
+  mov    r9,QWORD PTR [r9+rax*1]
+  movsd  QWORD PTR [rsi+r9*8],xmm0
+l62:
+  add    rax,0x8
+  cmp    rcx,rax
+  jne    l32
+l71:
+}.
+
+var gsl_spmatrix_special_mul is {asm :int :int intel (=&{rax},{rdi},{rsi})
+  mov    rax,QWORD PTR [rdi+0x30]
+  test   rax,rax
+  je     end
+  # int3
+  mov    rdx,QWORD PTR [rdi+0x18]
+  mov    r8,QWORD PTR [rdi+0x20]
+  lea    rdi,[rax*8+0x0]
+  xor    eax,eax
+  nop    DWORD PTR [rax+rax*1+0x0]
+l1:
+  mov    rcx,QWORD PTR [r8+rax*1]
+  movsd  xmm0,QWORD PTR [rdx+rax*1]
+  mulsd  xmm0,QWORD PTR [rsi+rcx*8]
+  movsd  QWORD PTR [rdx+rax*1],xmm0
+  add    rax,0x8
+  cmp    rdi,rax
+  jne    l1
+end:
+}.
+
+var gsl_vector_dataptr is {asm :int (={rax},r)
+  movq 16($1), %rax
+}.
+
+
+var SparseMatrix is Object cnew: {
+  on: 'new:' do: {:type
+    ^SparseMatrix cnew: {
+      oldErrorHandler => const gsl_set_error_handler_off[].
+      matrix => const gsl_spmatrix_alloc_nzmax[1, 1, 1, type].
+    }.
+  }.
+  on: 'new' do: { ^me new: const GSL_SPMATRIX_TRIPLET. }.
+  on: 'applyAll:' do: {:args
+    ^SparseMatrix cnew: {
+      oldErrorHandler => const gsl_set_error_handler_off[].
+      matrix => const gsl_spmatrix_alloc_nzmax[args @ 0, args @ 1, 1, const GSL_SPMATRIX_TRIPLET].
+    }.
+  }.
+  on: 'atI:andJ:' do: {:i:j
+    ^const gsl_spmatrix_get[my matrix, i, j].
+  }.
+
+  on: '&atI:andJ:' do: {:i:j
+    ^const gsl_spmatrix_ptr[my matrix, i, j].
+  }.
+
+  on: 'setAtI:andJ:to:' do: {:i:j:v
+    ^const gsl_spmatrix_set[my matrix, i, j, v].
+  }.
+
+  on: 'incrementAtI:andJ:' do: {:i:j
+    var &elp is const gsl_spmatrix_ptr[my matrix, i, j] get.
+    elp = 0 ifTrue: {
+      const gsl_spmatrix_set[my matrix, i, j, 1].
+    } ifFalse: {
+      const gsl_spmatrix_incr_el[elp].
+    }.
+  }.
+
+  on: 'toString' do: {
+    ^'[GSL Sparse Matrix]'.
+  }.
+
+  on: 'finalise' do: {
+    var newm is const gsl_spmatrix_ccs[my matrix].
+    const gsl_spmatrix_free[my matrix].
+    matrix => newm.
+  }.
+
+  on: 'display' do: {:self
+    var mat is my matrix.
+    var size is me size.
+    0 to: size head step: 1 do: {:i
+      0 to: size last step: 1 do: {:j
+        Pen write: (self atI: i andJ: j), write: ', '.
+      }.
+      Pen brk.
+    }.
+  }.
+
+  on: 'size' do: {
+    ^[const gsl_getsize1[my matrix get], const gsl_getsize2[my matrix get]].
+  }.
+
+  on: 'column:' do: {:col
+    var count is const gsl_getsize1[my matrix get].
+    var vec is Vector[count].
+    column: col into: vec size: count.
+    ^vec.
+  }.
+
+  on: 'column:into:size:' do: {:col:data:count
+    const gsl_spmatrix_row[my matrix get, data get, col].
+  }.
+
+  on: 'vectorMultiply:' do: {:vec
+    Pen writeln: [me size, my matrix, vec vector].
+    const gsl_spmatrix_special_mul[my matrix get, vec get].
+  }.
+
+  learn: '%~*:' means: 'vectorMultiply:'.
+
+  on: 'destruct' do: {
+    const gsl_set_error_handler[my oldErrorHandler].
+    const gsl_spmatrix_free[my matrix].
+  }.
+}.
+
+
+# Vector of doubles
+var Vector is Object cnew: {
+  on: 'new:' do: {:size
+    ^Vector cnew: {
+      size => size.
+      vector => const gsl_vector_calloc[size].
+    }.
+  }.
+  on: 'newWithSize:data:' do: {:size:data
+    ^Vector cnew: {
+      size => size.
+      vector => data.
+    }.
+  }.
+  on: 'applyAll:' do: {:x ^new: x head. }.
+
+  on: 'at:' do: {:i
+    ^const gsl_vector_get[my vector, i].
+  }.
+  on: 'put:at:' do: {:v:i
+    const gsl_vector_set[my vector, i, v].
+  }.
+  on: 'incrementAt:' do: {:i
+    # const gsl_vector_set[my vector, const gsl_vector_get[my vector, i] +=: 1].
+    var &elp is gsl_vector_ptr[my vector, i] get.
+    const gsl_spmatrix_incr_el[elp].
+  }.
+  on: 'reset' do: {
+    const gsl_vector_set_zero[my vector].
+  }.
+  on: 'toString' do: {
+    ^'[Vector of ${{my size}}$ elements]'.
+  }.
+  on: 'display' do: {:self
+    self display: my size.
+  }.
+  on: 'display:' do: {:self:sz
+    0 to: sz step: 1 do: {:i
+      Pen write: (self at: i), write: ', '.
+    }.
+    Pen brk.
+  }.
+  on: 'destruct' do: {
+    gsl_vector_free[my vector].
+  }.
+  on: 'vector' do: { ^my vector. }.
+  on: 'vectorP' do: {
+    var ptr is frozen ptr is CTypes pointer.
+    ptr set: const gsl_vector_dataptr[my vector get].
+    ^ptr.
+  }.
+  on: 'count' do: { ^my size. }.
+  learn: 'size' means: 'count'.
+
+  on: 'get' do: { ^const gsl_vector_ptr[my vector, 0] get. }.
+}.

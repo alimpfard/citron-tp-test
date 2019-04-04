@@ -4,7 +4,34 @@ import
   Library/Data/Array
   Library/Data/Set/HashSet: 'HashSet'.
 
+import
+  gsl: [
+    'SparseMatrix',
+    'Vector'
+  ]
+.
+
 #:language XFrozen
+
+var BidiMap is Object cnew: {:self
+  forward => HashMap new.
+  backward => HashMap new.
+  on: 'new' do: {
+    ^cnew: {
+      forward => HashMap new.
+      backward => HashMap new.
+    }.
+  }.
+  on: 'put:at:' do: {:v:k
+    my forward put: v at: k.
+    my backward put: k at: v.
+  }.
+  on: 'at:' do: {:k  ^my forward at: k. }.
+  on: 'bat:' do: {:k ^my backward at: k. }.
+  (0..5) each: {:_:x
+    self on: 'respondTo:' + ('and:' * x) do: {:msg:*args ^my forward message: msg arguments: args.}.
+  }.
+}.
 
 var Lexer is Object cnew: {
   collate => False.
@@ -352,39 +379,45 @@ var TokenAnalyser is Object cnew: {
   }.
 
   on: 'SWconsolidate:pre:post:' do: {:self:allTargetTexts:pre:post
-    var consolidateAll is HashMap new.
-    var appearsIn is Map new.
     var ii is -1.
-    var targetCount is allTargetTexts count.
-    var defTokEntry is [(x = 0) toNumber,, (x: (Generator from: 0 to: targetCount + 1))].
-    var tEstimate is 2.
-    allTargetTexts each: {:idx:targetText
+    var countv is allTargetTexts underlaying copy foldl: {:a:b ^a +=: 1.} accumulator: 0.
+    var res is allTargetTexts withIndices foldl: {:acc:comp
+      var &idx is comp head.
+      var &targetText is comp last.
+      var &consolidateAll is acc @ 0.
+      var &DFconsAll is acc @ 1.
+      var &appearsIn is acc @ 2.
       idx mod: 5, ifFalse: {
         pre[idx].
         post[idx].
       }.
-      var tIdx is idx + 1.
-      var tArrIdx is Array new: tEstimate * 2, push: tIdx.
+      var tIdx is idx.
+      var newIdx is appearsIn count.
       self split: targetText last, each_v: {:tok
-        (var &tokEntry is consolidateAll at: tok) isNil ifTrue: {
-          tokEntry is defTokEntry copy fmap!: \:x x.
-          appearsIn put: tArrIdx copy at: tok.
-          tokEntry @ tIdx +=: 1.
-          tokEntry @ 1 +=: 1.
-          consolidateAll put: tokEntry at: tok.
-        } ifFalse: {
-          tokEntry @ 0 +=: 1.
-          (var &tokVal is tokEntry @ tIdx) ifFalse: {
-            tokEntry @ 1 +=: 1.
-            appearsIn @ tok push: tIdx.
-            tEstimate +=: 1.
+        var &idxI is appearsIn @ tok.
+        # Pen writeln: 'idxi check: ' + (Clock timeExecutionOf: {
+          idxI isNil ifTrue: {
+            idxI is newIdx.
+            appearsIn put: idxI at: tok.
+            newIdx +=: 1.
           }.
-          tokVal +=: 1.
-        }.
+        # }).
+
+        # Pen writeln: 'consall ins: ' + (Clock timeExecutionOf: {
+          consolidateAll
+            incrementAtI: idxI
+            andJ: tIdx
+          .
+        # }).
+
+        # Pen writeln: 'DFconsAll ins: ' + (Clock timeExecutionOf: {
+          DFconsAll incrementAt: idxI.
+        # }).
       }.
-      tEstimate /=: 2.
-    }.
-    ^[consolidateAll, appearsIn].
+      ^acc.
+    } accumulator: [SparseMatrix[1, countv], Vector[countv * 1000], BidiMap new].
+    # res head finalise.
+    ^res.
   }.
 
   on: 'calculateTF-IDF:withMap:pre:post:' do: {:consolidateAll:appearsIn:pre:post
@@ -398,28 +431,24 @@ var TokenAnalyser is Object cnew: {
     }.
   }.
 
-  # Normalisation loses us the scale
-  # so we just don't normalise since
-  # we use RSD, and that only works
-  # properly on absolute units
-  on: 'calculateRSD:withMap:pre:post:' do: {:consolidateAll:appearsIn:pre:post
+
+  on: 'calculateRSD:withMap:andDFVector:pre:post:' do: {:consolidateAll:tokenMap:DFconsAll:pre:post
     var ii is -1.
-    # var maxTFs is consolidateAll fmap: \:k consolidateAll at: k, max.
-    # var maxDF is consolidateAll fmap: \:k consolidateAll @ k @ 1, values max.
-    consolidateAll each: {:k:v
-      pre[ii +=: 0.5].
+    # consolidateAll  <- (consolidateAll transpose * DFconsAll) transpose
+    consolidateAll vectorMultiply: DFconsAll.
+    # consolidateAll columns @rsd
+    var vec is Vector[(var size is consolidateAll size last)].
+    var res is Array new fill: consolidateAll size head with: {:col
+      pre[ii +=: 1].
+      vec reset.
+      consolidateAll column: col into: vec size: size.
+      var mean is gsl_stats_mean[vec vectorP, 1, size].
+      var sd   is gsl_stats_sd_m[vec vectorP, 1, size, mean].
+      var res  is sd / mean.
       post[ii].
-      appearsIn at: k, each_v: {:i
-        # v @ i /=: (maxTFs @ k) / (v @ 1 / maxDF).
-        v @ i *=: v @ 1.
-      }.
+      ^res.
     }.
-    ^consolidateAll fmap: {:k
-      var v is consolidateAll at: k.
-      pre[ii +=: 0.5].
-      post[ii].
-      ^v from: 0 length: v count, relativeStandardDeviation.
-    }.
+    ^res.
   }.
 
   on: 'merge:tokens:pre:post:' do: {:self:consolidated:allTokens:pre:post
@@ -503,6 +532,10 @@ Array on: 'relativeStandardDeviation' do: {
   ^variance sqrt / mean.
 }.
 
+Array on: 'asGenerator' do: {
+  ^Generator elementsOf: me.
+}.
+
 Map on: 'merge:with:' do: {:self:other:blk
   other each: {:k:v
     self contains: k, ifTrue: {
@@ -521,6 +554,9 @@ Generator on: 'interleaveWith:' do: {:other
   ^me copy fmap: \:x [x, other next].
 }.
 
+Generator on: 'withIndices' do: {
+  ^me imap: \:i:x [i, x].
+}.
 
 HashMap on: 'values' do: {
   var arr is Array new: me count.
