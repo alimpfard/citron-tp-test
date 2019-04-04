@@ -168,7 +168,7 @@ var SparseMatrix is Object cnew: {
   }.
 
   on: 'vectorMultiply:' do: {:vec
-    Pen writeln: [me size, my matrix, vec vector].
+    # Pen writeln: [me size, my matrix, vec vector].
     const gsl_spmatrix_special_mul[my matrix get, vec get].
   }.
 
