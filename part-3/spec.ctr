@@ -59,7 +59,7 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] DFconsAll { Nil }.
   let[Reflect thisContext] tokenMap { Nil }.
   let[Reflect thisContext] allTargetTexts { Nil }.
-  let[Reflect thisContext] sliceCount { 2000 }.
+  let[Reflect thisContext] sliceCount { 300 }.
 
   it can tokenise do: {:thisTest
     allTargetTexts is (
@@ -67,7 +67,7 @@ describe TokenAnalyser do: {:it:let
         list: 'samples',
         filter: (\:_:descr (descr @ 'file' startsWith: 'sample')),
         from: 0 length: sliceCount, asGenerator
-        fmap: {\:descr [(File new: 'out/' + (descr @ 'file')), (File new: 'samples/' + (descr @ 'file'), read)].}
+        fmap: {\:descr File new: 'samples/' + (descr @ 'file'), read.}
     ).
     thisTest tests: 'Tokeniser'.
     thisTest progressesUpTo: sliceCount.
@@ -79,7 +79,7 @@ describe TokenAnalyser do: {:it:let
 
     consolidateAll is res @ 0.
     DFconsAll is res @ 1.
-    tokenMap is res @ 2.
+    tokenMap is res @ 3.
 
     # consolidateAll display.
     # DFconsAll display.
@@ -102,7 +102,7 @@ describe TokenAnalyser do: {:it:let
     # dump rsd for inspection
     var fs is File new: 'rsd', open: 'w+'.
     rsd each: {:k:v
-      fs write: '${{tokenMap bat: k}}$\t${{v}}$\n'.
+      fs write: '${{tokenMap at: k}}$\t${{v}}$\n'.
     }.
     fs close.
   }.
@@ -110,7 +110,7 @@ describe TokenAnalyser do: {:it:let
   it can detect stopwords do: {:thisTest
     thisTest tests: 'Stopword detection'.
     var kfs is File new: 'gen-stopwords', open: 'w+'.
-    kfs write: '%:L' % ['\n', (rsd imap: \:i:x [x, i], sort: {:x:y ^x head > y head.}, take: 300, fmap!: \:x tokenMap bat: x last)].
+    kfs write: '%:L' % ['\n', (rsd imap: \:i:x [x, i], sort: {:x:y ^x head > y head.}, take: 300, fmap!: \:x tokenMap at: x last)].
     kfs close.
   }.
 }.

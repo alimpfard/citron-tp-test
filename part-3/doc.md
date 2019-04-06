@@ -4,7 +4,7 @@
 
 ### Top-level Explanation
 0. The documents are first tokenised normally
-1. The DF|TF matrix is generated for all the word-types
+1. The TF sparse matrix, and the DF vector is generated for all the word-types (see notes#1 about this)
 2. Each word-type is evaluated with the (below) given `score` function
 3. The top 300 words in order of RSD are picked as stopwords (somewhat arbitrary)
 
@@ -27,7 +27,27 @@ This is simply due to the fact that our chosen evaluation method works on absolu
 
 #### Pros
 1. no prior normalisation is necessary
-2. can be calculated in exactly one pass over each vector (see `Array::'relativeStandardDeviation'`)
+2. can be calculated in exactly one pass over each vector (see `TokenAnalyser::'calculateRSD:withMap:andDFVector:pre:post:'`)
 
 #### Cons
 1. when a word-type's TF matrix is really sparse, tends to generate very big results (>1000% RSD%)
+
+### Notes
+
+1. Since we can't create full association maps with sparse matrices, we have to store the index to a given token in a hashtable,
+which causes rather severe slowdowns (mainly a language issue), this is a non-issue in say, Python, whose `dict` is optimised for fast lookups. [see access time stats in the Stats section].
+
+2. GSL is used for Sparse Matrices, which has a rather lackluster view implementation, as such, RSD calculation is not as fast as it could be.
+
+### Stats
+
+1. average HashMap access time for hits and misses (all times in us):
+
+| Predicate      | Min            | 1st Qu.        | Median         | Mean           | 3rd Qu.        | Max            |
+| :------------- | :------------- | :------------- | :------------- | :------------- | :------------- | :------------- |
+| Hit (1244696)  | 0.00           | 3.00           | 4.00           | 6.04           | 5.00           | 205007.00      |
+| Miss (44123)   | 0.00           | 3.00           | 4.00           | 4.60           | 5.00           | 66.00          |
+
+2. Memory Statistics for 600 documents
+
+![memstats](memstats.png)

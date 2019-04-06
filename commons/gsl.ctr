@@ -95,12 +95,35 @@ var gsl_vector_dataptr is {asm :int (={rax},r)
   movq 16($1), %rax
 }.
 
+var gsl_spmatrix_incr_at is {asm :int :int :int :int :int intel (=&{rax},{rdi},{rsi},{rdx},{rcx},{r8})
+  mov rbp, rdi
+  mov r12d, esi
+  mov r13d, edx
+  mov rbx, r8
+  call rcx
+  movsd xmm0, QWORD PTR .LC0[rip]
+  test rax, rax
+  je .L2
+  addsd xmm0, QWORD PTR [rax]
+  movsd QWORD PTR [rax], xmm0
+.L2:
+  mov edx, r13d
+  mov esi, r12d
+  mov rdi, rbp
+  call rbx
+  jmp .L4
+.LC0:
+  .long 0
+  .long 1072693248
+.L4:
+}.
 
 var SparseMatrix is Object cnew: {
   on: 'new:' do: {:type
     ^SparseMatrix cnew: {
       oldErrorHandler => const gsl_set_error_handler_off[].
       matrix => const gsl_spmatrix_alloc_nzmax[1, 1, 1, type].
+      matrixaddr => my matrix get.
     }.
   }.
   on: 'new' do: { ^me new: const GSL_SPMATRIX_TRIPLET. }.
@@ -108,6 +131,7 @@ var SparseMatrix is Object cnew: {
     ^SparseMatrix cnew: {
       oldErrorHandler => const gsl_set_error_handler_off[].
       matrix => const gsl_spmatrix_alloc_nzmax[args @ 0, args @ 1, 1, const GSL_SPMATRIX_TRIPLET].
+      matrixaddr => my matrix get.
     }.
   }.
   on: 'atI:andJ:' do: {:i:j
@@ -123,12 +147,9 @@ var SparseMatrix is Object cnew: {
   }.
 
   on: 'incrementAtI:andJ:' do: {:i:j
-    var &elp is const gsl_spmatrix_ptr[my matrix, i, j] get.
-    elp = 0 ifTrue: {
-      const gsl_spmatrix_set[my matrix, i, j, 1].
-    } ifFalse: {
-      const gsl_spmatrix_incr_el[elp].
-    }.
+    var a0 is frozen _ is const gsl_spmatrix_ptr &symbol get.
+    var a1 is frozen _ is const gsl_spmatrix_set &symbol get.
+    const gsl_spmatrix_incr_at[my matrixaddr, i, j, a0, a1].
   }.
 
   on: 'toString' do: {
@@ -139,6 +160,7 @@ var SparseMatrix is Object cnew: {
     var newm is const gsl_spmatrix_ccs[my matrix].
     const gsl_spmatrix_free[my matrix].
     matrix => newm.
+    matrixaddr => newm addr.
   }.
 
   on: 'display' do: {:self
@@ -153,23 +175,23 @@ var SparseMatrix is Object cnew: {
   }.
 
   on: 'size' do: {
-    ^[const gsl_getsize1[my matrix get], const gsl_getsize2[my matrix get]].
+    ^[const gsl_getsize1[my matrixaddr], const gsl_getsize2[my matrixaddr]].
   }.
 
   on: 'column:' do: {:col
-    var count is const gsl_getsize1[my matrix get].
+    var count is const gsl_getsize1[my matrixaddr].
     var vec is Vector[count].
     column: col into: vec size: count.
     ^vec.
   }.
 
   on: 'column:into:size:' do: {:col:data:count
-    const gsl_spmatrix_row[my matrix get, data get, col].
+    const gsl_spmatrix_row[my matrixaddr, data get, col].
   }.
 
   on: 'vectorMultiply:' do: {:vec
     # Pen writeln: [me size, my matrix, vec vector].
-    const gsl_spmatrix_special_mul[my matrix get, vec get].
+    const gsl_spmatrix_special_mul[my matrixaddr, vec get].
   }.
 
   learn: '%~*:' means: 'vectorMultiply:'.

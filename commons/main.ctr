@@ -13,26 +13,6 @@ import
 
 #:language XFrozen
 
-var BidiMap is Object cnew: {:self
-  forward => HashMap new.
-  backward => HashMap new.
-  on: 'new' do: {
-    ^cnew: {
-      forward => HashMap new.
-      backward => HashMap new.
-    }.
-  }.
-  on: 'put:at:' do: {:v:k
-    my forward put: v at: k.
-    my backward put: k at: v.
-  }.
-  on: 'at:' do: {:k  ^my forward at: k. }.
-  on: 'bat:' do: {:k ^my backward at: k. }.
-  (0..5) each: {:_:x
-    self on: 'respondTo:' + ('and:' * x) do: {:msg:*args ^my forward message: msg arguments: args.}.
-  }.
-}.
-
 var Lexer is Object cnew: {
   collate => False.
   collateList => Nil.
@@ -60,6 +40,13 @@ var Lexer is Object cnew: {
     str is str reSplit: '\\s+'.#, filter: \:_:x x empty not.
     ^str.
   }.
+  on: 'splitGen:' do: {:self:str
+    my collate ifTrue: {
+      str is self normalise: str.
+    }.
+    str is str ~ 's/\\s/ /g' ~ my fReg.
+    ^str reSplitGen: '\\s+'.
+  }.
 }.
 
 var puncReg is String compileRegex: ?>s/[‌‎\[\]\{\}،\/\?\.,:;'"»«\!\@\#\$\%\^\&\*\(\)؟_\+=\-\`\s*0-9۰-۹]//gmuW<?.
@@ -73,7 +60,7 @@ var TokenAnalyser is Object cnew: {
     var resmap is Map new.
     var stopwords is my stopwords is HashSet new addAll: (my lexer normalise: (File new: 'stopwords/persian', read), split: '\n').
     my lexer
-      split: text,
+      splitGen: text,
       each_v: {:x
         isStopword[stopwords, x] not & isPunctuation[x] not ifTrue: {
           (var &val is resmap at: x) isNil ifTrue: {
@@ -86,7 +73,7 @@ var TokenAnalyser is Object cnew: {
     ^resmap.
   }.
   on: 'split:' do: {:text
-    ^my lexer split: text.
+    ^my lexer splitGen: text.
   }.
   on: 'isRemovalCandidate:' do: {:x
     isStopword[my stopwords, x] ifTrue: { ^True. }.
@@ -387,36 +374,33 @@ var TokenAnalyser is Object cnew: {
       var &consolidateAll is acc @ 0.
       var &DFconsAll is acc @ 1.
       var &appearsIn is acc @ 2.
-      idx mod: 5, ifFalse: {
-        pre[idx].
-        post[idx].
+      var &appearsInR is acc @ 3.
+      var &tIdx is idx.
+      var &newIdx is appearsIn count.
+      pre[idx].
+      self split: targetText, each_v: {:&tok
+        # var idxI is Nil.
+        # var t is Clock timeExecutionOf: {
+        var idxI is appearsIn at: tok.
+        # }.
+        idxI isNil ifTrue: {
+          idxI is newIdx.
+          appearsIn put: idxI at: tok.
+          appearsInR put: tok at: idxI.
+          newIdx +=: 1.
+          # Pen writeln: 'Miss $$t'.
+        # } ifFalse: {
+          # Pen writeln: 'Hit $$t'.
+        }.
+        consolidateAll
+          incrementAtI: idxI
+          andJ: tIdx
+        .
+        DFconsAll incrementAt: idxI.
       }.
-      var tIdx is idx.
-      var newIdx is appearsIn count.
-      self split: targetText last, each_v: {:tok
-        var &idxI is appearsIn @ tok.
-        # Pen writeln: 'idxi check: ' + (Clock timeExecutionOf: {
-          idxI isNil ifTrue: {
-            idxI is newIdx.
-            appearsIn put: idxI at: tok.
-            newIdx +=: 1.
-          }.
-        # }).
-
-        # Pen writeln: 'consall ins: ' + (Clock timeExecutionOf: {
-          consolidateAll
-            incrementAtI: idxI
-            andJ: tIdx
-          .
-        # }).
-
-        # Pen writeln: 'DFconsAll ins: ' + (Clock timeExecutionOf: {
-          DFconsAll incrementAt: idxI.
-        # }).
-      }.
+      post[idx].
       ^acc.
-    } accumulator: [SparseMatrix[1, countv], Vector[countv * 1000], BidiMap new].
-    # res head finalise.
+    } accumulator: [SparseMatrix[1, countv], Vector[countv * 1000], HashMap new, HashMap new].
     ^res.
   }.
 
@@ -437,14 +421,14 @@ var TokenAnalyser is Object cnew: {
     # consolidateAll  <- (consolidateAll transpose * DFconsAll) transpose
     consolidateAll vectorMultiply: DFconsAll.
     # consolidateAll columns @rsd
-    var vec is Vector[(var size is consolidateAll size last)].
+    var vec is Vector[(var &size is consolidateAll size last)].
     var res is Array new fill: consolidateAll size head with: {:col
       pre[ii +=: 1].
       vec reset.
       consolidateAll column: col into: vec size: size.
-      var mean is gsl_stats_mean[vec vectorP, 1, size].
-      var sd   is gsl_stats_sd_m[vec vectorP, 1, size, mean].
-      var res  is sd / mean.
+      var &mean is gsl_stats_mean[vec vectorP, 1, size].
+      var &sd   is gsl_stats_sd_m[vec vectorP, 1, size, mean].
+      var &res  is sd / mean.
       post[ii].
       ^res.
     }.
