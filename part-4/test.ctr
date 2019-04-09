@@ -1,0 +1,55 @@
+var flatten is {:what
+  var lst is Array new.
+  what each_v: {:l
+    (Reflect isObject: l linkedTo: Array) either: {
+      lst is lst + flatten[l].
+    } or: {
+      lst push: l.
+    }.
+  }.
+  ^lst.
+}.
+Array on: 'flatten' do: {
+    ^flatten[me].
+}.
+var keyboardLayout is [
+    'qwertyuiop',
+    '',
+    'asdfghjkl',
+    '',
+    'zxcvbnm'
+] fmap!: \:x x characters.
+
+var rowCounts is keyboardLayout fmap: \:x x count.
+var xA        is rowCounts max + 1 / 2.
+var yA        is keyboardLayout count + 1 / 2.
+var thresh1   is 0.5.
+var mmax      is 5.
+var mmin      is 2.
+var Ct        is thresh1 * mmax / (xA + yA - 2 * mmin).
+var offset    is \:r rowCounts max - (rowCounts @ r) / 2.
+var Pc        is \:i0:i1:j0:j1 2 * thresh1 - ((i1 - i0 + offset[i0] - offset[i1]) abs + (j1 - j0) abs * Ct).
+
+
+var keymap is Map new.
+keyboardLayout each: {:i:x
+    x each: {:j:v
+        keymap put: [i, j] at: v.
+    }.
+}.
+
+var keyfmap is Map new.
+([keyboardLayout flatten] * 2) product each_v: {:comb
+    var keydescr is (comb fmap: \:x keymap at: x) flatten.
+    var prob is Pc[keydescr @ 0, keydescr @ 2, keydescr @ 1, keydescr @ 3].
+    #Pen writeln: 'Prob[${{comb join: ','}}$] = $$prob at $$keydescr'.
+    (prob < thresh1) ifTrue: {
+        True continue.
+    }.
+    keyfmap contains: comb head, ifFalse: {
+        keyfmap put: Map new at: comb head.
+    }.
+    keyfmap at: comb head, put: prob at: comb last.
+}.
+
+Pen writeln: keyfmap.
