@@ -208,12 +208,17 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
        i++, cellv = node->cells + i)
     if (*cellv)
       (*cellv)->filter_data.enabled = 0;
+  if (e) {
+    struct word_tree_node* cell = node->cells[0];
+    if (cell)
+      cell->filter_data.proj_prob = node->filter_data.proj_prob * 0.6;
+  }
   for (mapv *const *p = filter_get(e); *p; p++) {
     struct word_tree_node **cell = node->cells + (*p)->value;
     if (*cell) {
       float prob = (*p)->prob * node->filter_data.proj_prob;
       (*cell)->filter_data.proj_prob = prob;
-      if (prob >= 0.5) {
+      if (prob >= MIN_ACCEPTABLE_PROB) {
         (*cell)->filter_data.enabled = 1;
         tree_filter_if_not_exist_(*cell, tree, str);
       }
@@ -230,7 +235,7 @@ void conditional_dfs_into(struct word_tree_node *node, int sl, char const**vec,
     return;
   if (*idx == vs)
     return;
-  if (node->cells[0]) {
+  if (node->cells[0] && node->cells[0]->filter_data.proj_prob > MIN_ACCEPTABLE_PROB) {
     // printf("idx %d will have '%s'\n", *idx,
     // node->cells[0]->filter_data.data_ptr);
     vec[(*idx)++] = node->cells[0]->filter_data.data_ptr;

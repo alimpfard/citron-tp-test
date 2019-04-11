@@ -8,6 +8,8 @@
 #define TREE_RD_MODE_BINARY 0
 #define TREE_RD_MODE_PLAIN  1
 
+#define MIN_ACCEPTABLE_PROB 0.5
+
 #define LEVENSORT
 
 struct word_tree_node {
