@@ -1,12 +1,12 @@
-CFLAGS = -Wall -Werror
+CFLAGS = -Wall -Werror -g
 
 all: utf8proc libwordtree.so
 
 utf8proc:
 	make -C utf8
 
-run: libwordtree.so
-	$(CC) $(LDFLAGS) -o $@ $^
+run: word-tree.o filter.o
+	$(CC) $(CFLAGS) -o $@ word-tree.o filter.o utf8/utf8proc.o
 
 libwordtree.so: CFLAGS += -fPIC # Build objects for .so with -fPIC.
 libwordtree.so: libwordtree.a

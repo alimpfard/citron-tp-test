@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define TEST
+
 #if defined(LEVENSORT) | defined(TEST)
 #define IS_TIMSORT_R
 #include "timsort.c"
@@ -185,6 +187,7 @@ int tree_exists(word_tree_t tree, char *str) {
   return !!node->cells[0];
 }
 
+static int check_once = 0;
 int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
                               char *str) {
   if (!node->filter_data.enabled)
@@ -210,8 +213,21 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
       (*cellv)->filter_data.enabled = 0;
   if (e) {
     struct word_tree_node* cell = node->cells[0];
-    if (cell)
-      cell->filter_data.proj_prob = node->filter_data.proj_prob * 0.6;
+    if (cell) {
+      float prob = node->filter_data.proj_prob * 0.6;
+      cell->filter_data.proj_prob = prob;
+      if (prob >= MIN_ACCEPTABLE_PROB)
+        cell->filter_data.enabled = 1;
+    }
+  } else {
+    for (i = 1, cellv = node->cells + i; i < tree->alphabet_count;
+         i++, cellv = node->cells + i)
+      if (*cellv) {
+        float prob = node->filter_data.proj_prob * 0.6;
+        (*cellv)->filter_data.proj_prob = prob;
+        if (prob >= MIN_ACCEPTABLE_PROB)
+          (*cellv)->filter_data.enabled = 1;
+      }
   }
   for (mapv *const *p = filter_get(e); *p; p++) {
     struct word_tree_node **cell = node->cells + (*p)->value;
@@ -250,6 +266,7 @@ int tree_filter_if_not_exist(word_tree_t tree, char *str, char const**filtered_v
                              int fvsize) {
   if (tree_exists(tree, str))
     return -1;
+  check_once = 1;
   int res = tree_filter_if_not_exist_(tree->root, tree, str);
   if (!fvsize || !filtered_v)
     return res;
@@ -341,7 +358,7 @@ int main(int argc, char **argv) {
   word_tree_t tree = tree_freadf("dict", "a26s64", TREE_RD_MODE_PLAIN);
   char *vec[1024];
   char *sstr = argc > 1 ? argv[1] : "twst";
-  int st = tree_filter_if_not_exist(tree, sstr, vec, 1024);
+  int st = tree_filter_if_not_exist(tree, sstr, (char const**) vec, 1024);
   if (st == -1)
     puts("That word exists in the dict");
   else if (st == 0)
