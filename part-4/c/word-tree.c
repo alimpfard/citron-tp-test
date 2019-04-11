@@ -80,13 +80,19 @@ word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
     WIDE_CHAR_T f;
     ssize_t it;
     ssize_t size = strlen(format);
-    while ((it = utf8proc_iterate(format, size, &f)) > 0) {
+    int n;
+    while (*format && ((it = utf8proc_iterate(format, size, &f)) > 0)) {
+      format += it;
+      size -= it;
+
       switch (f) {
       case 'a':
-        format += sscanf(format, "%i", &alphabet_count);
+        sscanf(format, "%i%n", &alphabet_count, &n);
+        format += n;
         break;
       case 's':
-        format += sscanf(format, "%i", &initial_size);
+        sscanf(format, "%i%n", &initial_size, &n);
+        format += n;
         break;
       case 'f':
         it += utf8proc_iterate(format, -1, &f);
@@ -96,8 +102,6 @@ word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
       default:
         fprintf(stderr, "%lc is not a valid format specifier\n", f);
       }
-      format += it;
-      size -= it;
     }
   } // allocate and init tree
   word_tree_t tree = malloc(sizeof *tree);
@@ -131,11 +135,16 @@ word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
 }
 
 int tree_exists(word_tree_t tree, char *str) {
-  WIDE_CHAR_T c;
+  WIDE_CHAR_T f;
+  ssize_t it;
+  ssize_t size = strlen(str);
   int e;
   struct word_tree_node *node = tree->root;
-  while (c = *(str++)) {
-    e = tree->encoder(c, tree);
+  while (*str && ((it = utf8proc_iterate(str, size, &f)) > 0)) {
+    str += it;
+    size -= it;
+
+    e = tree->encoder(f, tree);
     struct word_tree_node **cell = node->cells + e;
     if (!*cell)
       return 0;
@@ -149,9 +158,15 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
   if (!node->filter_data.enabled)
     return 0;
 
-  WIDE_CHAR_T c = *(str++);
+  WIDE_CHAR_T c;
+  ssize_t it = utf8proc_iterate(str, strlen(str), &c);
+  if (it < 0) {
+    printf("Invalid multi-byte string lookup\n");
+    abort();
+  }
+  str += it;
   int e;
-  if (c == 0) // end of word
+  if (it == 0 || c == 0) // end of word
     e = 0;
   else
     e = tree->encoder(c, tree);
@@ -172,6 +187,7 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
       }
     }
   }
+  return 0;
 }
 
 void conditional_dfs_into(struct word_tree_node *node, int sl, char **vec,
@@ -259,7 +275,7 @@ size_t levenshtein_n(const char *a, const size_t length, const char *b,
   return result;
 }
 
-size_t levenshtein(const char **a, const char **b) {
+size_t levenshtein(const char *a, const char *b) {
   const size_t length = strlen(a);
   const size_t bLength = strlen(b);
   return levenshtein_n(a, length, b, bLength);
@@ -271,7 +287,7 @@ int slevenshtein(const void **a, const void **b, char *sstr) {
 }
 
 int main(int argc, char **argv) {
-  word_tree_t tree = tree_freadf("dict", NULL, TREE_RD_MODE_PLAIN);
+  word_tree_t tree = tree_freadf("dict", "a26s64", TREE_RD_MODE_PLAIN);
   char *vec[1024];
   char *sstr = argc > 1 ? argv[1] : "twst";
   int st = tree_filter_if_not_exist(tree, sstr, vec, 1024);
