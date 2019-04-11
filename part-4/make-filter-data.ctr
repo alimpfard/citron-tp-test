@@ -52,4 +52,14 @@ var keyfmap is Map new.
     keyfmap at: comb head, put: prob at: comb last.
 }.
 
-Pen writeln: keyfmap.
+var data is File new: 'data.c', open: 'w+'.
+
+keyfmap each: {:k:v
+    data write: '[${{k byteAt: 0, - 96}}$] = (mapv*[]) {\n'.
+    v each: {:k:v
+        data write: '&(mapv) {${{k byteAt: 0, - 96}}$, ${{v}}$},\n\t'.
+    }.
+    data write: 'NULL\n\t},\n'.
+}.
+
+data close.

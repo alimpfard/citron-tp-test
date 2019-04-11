@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef TEST
 #define IS_TIMSORT_R
 #include "timsort.c"
+#endif
 
 int enc_simple(WIDE_CHAR_T c, word_tree_t tree) {
   return (int)(c - tree->alphabet_first + 1);
@@ -25,7 +27,7 @@ void *allocate_empty_node(int count) {
 }
 #define LOAD_FACTOR 84
 #define INCREASE_FACTOR 2
-char const *dynarray_insert(word_tree_t tree, char *str) {
+static inline char const *dynarray_insert(word_tree_t tree, char *str) {
   if (tree->filled * 100 / tree->allocd > LOAD_FACTOR) {
     tree->allocd *= INCREASE_FACTOR;
     tree->data = realloc(tree->data, tree->allocd * sizeof(char *));
@@ -40,7 +42,11 @@ int tree_insert(word_tree_t tree, char *str) {
   int e;
   struct word_tree_node *node = tree->root;
   char *ss = str;
-  while (c = *(str++)) {
+  ssize_t it;
+  ssize_t size = strlen(str);
+  while (*str && ((it = utf8proc_iterate((utf8proc_uint8_t*)str, size, &c)) > 0)) {
+    str += it;
+    size -= it;
     e = tree->encoder(c, tree);
     struct word_tree_node **cell = node->cells + e;
     if (!*cell)
@@ -81,7 +87,7 @@ word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
     ssize_t it;
     ssize_t size = strlen(format);
     int n;
-    while (*format && ((it = utf8proc_iterate(format, size, &f)) > 0)) {
+    while (*format && ((it = utf8proc_iterate((utf8proc_uint8_t*)format, size, &f)) > 0)) {
       format += it;
       size -= it;
 
@@ -95,7 +101,7 @@ word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
         format += n;
         break;
       case 'f':
-        it += utf8proc_iterate(format, -1, &f);
+        it += utf8proc_iterate((utf8proc_uint8_t*)format, -1, &f);
         alphabet_first = f;
         break;
         // ...
@@ -140,7 +146,7 @@ int tree_exists(word_tree_t tree, char *str) {
   ssize_t size = strlen(str);
   int e;
   struct word_tree_node *node = tree->root;
-  while (*str && ((it = utf8proc_iterate(str, size, &f)) > 0)) {
+  while (*str && ((it = utf8proc_iterate((utf8proc_uint8_t*)str, size, &f)) > 0)) {
     str += it;
     size -= it;
 
@@ -159,7 +165,7 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
     return 0;
 
   WIDE_CHAR_T c;
-  ssize_t it = utf8proc_iterate(str, strlen(str), &c);
+  ssize_t it = utf8proc_iterate((utf8proc_uint8_t*)str, strlen(str), &c);
   if (it < 0) {
     printf("Invalid multi-byte string lookup\n");
     abort();
@@ -190,7 +196,7 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
   return 0;
 }
 
-void conditional_dfs_into(struct word_tree_node *node, int sl, char **vec,
+void conditional_dfs_into(struct word_tree_node *node, int sl, char const**vec,
                           int vs, int *idx) {
   if (!node)
     return;
@@ -209,7 +215,7 @@ void conditional_dfs_into(struct word_tree_node *node, int sl, char **vec,
 
 // -1 -> exists
 // ~  -> how many were assigned into filtered_v
-int tree_filter_if_not_exist(word_tree_t tree, char *str, char **filtered_v,
+int tree_filter_if_not_exist(word_tree_t tree, char *str, char const**filtered_v,
                              int fvsize) {
   if (tree_exists(tree, str))
     return -1;
@@ -282,7 +288,7 @@ size_t levenshtein(const char *a, const char *b) {
 }
 
 int slevenshtein(const void **a, const void **b, char *sstr) {
-  char *x = *a, *y = *b;
+  char *x = (char*)*a, *y = (char*)*b;
   return levenshtein(x, sstr) - levenshtein(y, sstr);
 }
 
