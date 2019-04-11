@@ -25,6 +25,7 @@ void *allocate_empty_node(int count) {
   root->cells = calloc(count, sizeof(root));
   return root;
 }
+
 #define LOAD_FACTOR 84
 #define INCREASE_FACTOR 2
 static inline char const *dynarray_insert(word_tree_t tree, char *str) {
@@ -35,6 +36,12 @@ static inline char const *dynarray_insert(word_tree_t tree, char *str) {
   char **p = tree->data + (tree->filled++);
   *p = str;
   return str;
+}
+
+static inline void dynarray_free(word_tree_t tree) {
+  if(!tree->allocd) return;
+  free(tree->data);
+  tree->allocd = 0;
 }
 
 int tree_insert(word_tree_t tree, char *str) {
@@ -70,6 +77,25 @@ int tree_insert(word_tree_t tree, char *str) {
   return 0;
 }
 
+static inline void free_nodes(struct word_tree_node* node, int count) {
+  int i;
+  struct word_tree_node** snode;
+  for (snode = node->cells, i = 0; i<count; snode++,i++)
+    if (*snode)
+      free_nodes(*snode, count);
+  free(node);
+}
+
+void tree_free(word_tree_t tree) {
+  if (!tree) return;
+  // free the data
+  dynarray_free(tree);
+  // free the nodes
+  free_nodes(tree->root, tree->alphabet_count);
+  // free the tree
+  free(tree);
+}
+
 word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
   int alphabet_count = 26;
   int initial_size = 16;
@@ -101,7 +127,7 @@ word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
         format += n;
         break;
       case 'f':
-        it += utf8proc_iterate((utf8proc_uint8_t*)format, -1, &f);
+        format += utf8proc_iterate((utf8proc_uint8_t*)format, -1, &f);
         alphabet_first = f;
         break;
         // ...

@@ -1,0 +1,27 @@
+import
+  Library/Test: 'describe'
+  wordtree: 'WordTree'
+.
+
+describe WordTree do: {:it
+  it can be read do: {
+    var tree is WordTree new: '../c/dict'.
+    tree contains: 'test', should = True.
+    tree destruct.
+  }.
+  it can filter existing words do: {
+    var tree is WordTree new: '../c/dict'.
+    tree filter: 'test', should = ['test'].
+    tree destruct.
+  }.
+  it can filter nonexistent words do: {
+    var tree is WordTree new: '../c/dict'.
+    tree filter: 'fest', count should not = 0.
+    tree destruct.
+  }.
+  it can determine the levenshtein edit distance of two words do: {
+    levenshtein['fest', 'test'] should = 1.
+    levenshtein['what', 'wheat'] should = 1.
+    levenshtein['', 'shit'] should = 4.
+  }.
+}.

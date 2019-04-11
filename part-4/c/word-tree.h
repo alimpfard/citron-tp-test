@@ -63,6 +63,13 @@ typedef word_tree* word_tree_t;
 word_tree_t tree_freadf(const char *path, const char *format, int rd_mode);
 
 /**
+ * Frees the given tree
+ *
+ * @param tree - tree to free
+ */
+void tree_free(word_tree_t tree);
+
+/**
  * Insert word into tree if not exists
  *
  * @param tree - the tree to insert into
