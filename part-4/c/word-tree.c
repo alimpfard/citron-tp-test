@@ -213,7 +213,7 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
     if (*cell) {
       float prob = (*p)->prob * node->filter_data.proj_prob;
       (*cell)->filter_data.proj_prob = prob;
-      if (prob >= 0.6) {
+      if (prob >= 0.5) {
         (*cell)->filter_data.enabled = 1;
         tree_filter_if_not_exist_(*cell, tree, str);
       }
