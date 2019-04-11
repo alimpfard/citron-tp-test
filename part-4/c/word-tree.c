@@ -286,6 +286,7 @@ int slevenshtein(const void **a, const void **b, char *sstr) {
   return levenshtein(x, sstr) - levenshtein(y, sstr);
 }
 
+#ifdef TEST
 int main(int argc, char **argv) {
   word_tree_t tree = tree_freadf("dict", "a26s64", TREE_RD_MODE_PLAIN);
   char *vec[1024];
@@ -307,3 +308,4 @@ int main(int argc, char **argv) {
   }
   return 0;
 }
+#endif
