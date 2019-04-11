@@ -8,6 +8,8 @@
 #define TREE_RD_MODE_BINARY 0
 #define TREE_RD_MODE_PLAIN  1
 
+#define LEVENSORT
+
 struct word_tree_node {
     //void* metadata;
     struct filter_data {
@@ -106,6 +108,25 @@ int tree_exists(word_tree_t tree, char *str);
  */
 int tree_filter_if_not_exist(word_tree_t tree, char *str, char const**filtered_v,
                              int fvsize);
+#ifdef LEVENSORT
+ /**
+  * Check tree or filter the tree into the given vector space, returns a sorted vector
+  *
+  * @param tree - the tree to filter
+  * @param str  - the string to check
+  * @param filtered_v - a vector of size >= `fvsize` for the results
+  * @param fvsize - the number of desired filter results
+  *
+  * @return
+  *     `-1`: if the string exists
+  *     anything else: the number of filtered results stored into filtered_v
+  *
+  * @notes:
+  * do not free nor modify the strings returned in `filtered_v`.
+  */
+ int tree_filter_if_not_exist_sorted(word_tree_t tree, char *str, char const**filtered_v,
+                              int fvsize);
+#endif
 
 // utility functions
 size_t levenshtein(const char *a, const char *b);

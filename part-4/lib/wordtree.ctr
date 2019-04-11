@@ -6,6 +6,7 @@ Inject
   importFunctionsOrTypes: [
     'tree_freadf',
     'tree_filter_if_not_exist',
+    'tree_filter_if_not_exist_sorted',
     'tree_exists',
     'tree_free',
     'TREE_RD_MODE_PLAIN',
@@ -35,6 +36,16 @@ var WordTree is Object cnew: {
   }.
   on: 'filter:' do: {:str
     var len is const tree_filter_if_not_exist[my tree, str, my space, my size].
+    len = -1 ifTrue: { ^[str]. }.
+    len = 0  ifTrue: { ^[]. }.
+    var space is my space.
+    ^Array new fill: len with: {:idx
+      ^(space + (idx * 8)) derefAs: space, readCString.
+    }.
+  }.
+
+  on: 'filterSorted:' do: {:str
+    var len is const tree_filter_if_not_exist_sorted[my tree, str, my space, my size].
     len = -1 ifTrue: { ^[str]. }.
     len = 0  ifTrue: { ^[]. }.
     var space is my space.

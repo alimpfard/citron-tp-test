@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef TEST
+#if defined(LEVENSORT) | defined(TEST)
 #define IS_TIMSORT_R
 #include "timsort.c"
 #endif
@@ -313,10 +313,23 @@ size_t levenshtein(const char *a, const char *b) {
   return levenshtein_n(a, length, b, bLength);
 }
 
-int slevenshtein(const void **a, const void **b, char *sstr) {
-  char *x = (char*)*a, *y = (char*)*b;
+int slevenshtein(const void *a, const void *b, void *sstr) {
+  char *x = *(char**)a, *y = *(char**)b;
   return levenshtein(x, sstr) - levenshtein(y, sstr);
 }
+
+#ifdef LEVENSORT
+int tree_filter_if_not_exist_sorted(word_tree_t tree, char *str, char const**filtered_v,
+                            int fvsize) {
+  int res = tree_filter_if_not_exist(tree, str, filtered_v, fvsize);
+  if (res < 2)
+    return res; // there's no point sorting these cases
+  int val = timsort_r(filtered_v, res, sizeof(filtered_v[0]), &slevenshtein, str);
+  if (val)
+    fprintf (stderr, "Timesort failed with result %d\n", val);
+  return res;
+}
+#endif
 
 #ifdef TEST
 int main(int argc, char **argv) {

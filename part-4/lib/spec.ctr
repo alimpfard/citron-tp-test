@@ -16,7 +16,7 @@ describe WordTree do: {:it
   }.
   it can filter nonexistent words do: {
     var tree is WordTree new: '../c/dict'.
-    tree filter: 'fest', count should not = 0.
+    tree filterSorted: 'fest', count should not = 0.
     tree destruct.
   }.
   it can determine the levenshtein edit distance of two words do: {
