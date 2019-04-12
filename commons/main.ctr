@@ -5,10 +5,11 @@ import
   Library/Data/Set/HashSet: 'HashSet'.
 
 import
-  gsl: [
-    'SparseMatrix',
-    'Vector'
-  ]
+  # gsl: [
+  #   'SparseMatrix',
+  #   'Vector'
+  # ]
+  wordtree: 'WordTree'
 .
 
 #:language XFrozen
@@ -80,6 +81,28 @@ var TokenAnalyser is Object cnew: {
     isPunctuation[x] ifTrue: { ^True. }.
     ^False.
   }.
+
+  on: 'spellcheckAndFix:withDictionaryTree:' do: {:str:tree
+    Pen writeln: 'sort for $$str'.
+    var sugg is tree filterSorted: str.
+    sugg count = 0 ifTrue: {
+      ^[str, '<no suggestions>'].
+    }.
+    sugg head = str ifTrue: {
+      ^[str, '<correct>'].
+    }.
+    ^[str, sugg from: 0 lengthMax: 3].
+  }.
+
+  on: 'spellcheck:withDictionaryTree:pre:post:' do: {:self:coll:tree:pre:post
+    ^coll foldl: {:acc:str
+      ^acc + (self split: str, fmap: {:str
+        isPunctuation[str] ifTrue: { ^[str, '<correct>']. }.
+        ^self spellcheckAndFix: str withDictionaryTree: tree.
+      }, toArray).
+    } accumulator: Array new.
+  }.
+
   on: 'tag:pre:post:' do: {:text:pre:post
     var split is my lexer split: text. #, filter: \:_:x isStopword[x] not.
 

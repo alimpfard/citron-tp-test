@@ -13,7 +13,10 @@
 #endif
 
 int enc_simple(WIDE_CHAR_T c, word_tree_t tree) {
-  return (int)(c - tree->alphabet_first + 1);
+  int x = (int)(c - tree->alphabet_first + 1);
+  if (x >= tree->alphabet_count)
+    printf("Value out of range") && (abort(),0);
+  return x;
 }
 
 WIDE_CHAR_T dec_simple(int e, word_tree_t tree) {
@@ -229,7 +232,7 @@ int tree_filter_if_not_exist_(struct word_tree_node *node, word_tree *tree,
           (*cellv)->filter_data.enabled = 1;
       }
   }
-  for (mapv *const *p = filter_get(e); *p; p++) {
+  for (mapv *const *p = filter_get(e); p&&*p; p++) {
     struct word_tree_node **cell = node->cells + (*p)->value;
     if (*cell) {
       float prob = (*p)->prob * node->filter_data.proj_prob;
@@ -355,9 +358,11 @@ int tree_filter_if_not_exist_sorted(word_tree_t tree, char *str, char const**fil
 
 #ifdef TEST
 int main(int argc, char **argv) {
-  word_tree_t tree = tree_freadf("dict", "a26s64", TREE_RD_MODE_PLAIN);
+  if (argc < 4)
+    return 1;
+  word_tree_t tree = tree_freadf(argv[1], argv[2], TREE_RD_MODE_PLAIN);
   char *vec[1024];
-  char *sstr = argc > 1 ? argv[1] : "twst";
+  char *sstr = argv[3];
   int st = tree_filter_if_not_exist(tree, sstr, (char const**) vec, 1024);
   if (st == -1)
     puts("That word exists in the dict");

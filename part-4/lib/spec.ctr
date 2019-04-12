@@ -4,19 +4,9 @@ import
 .
 
 describe WordTree do: {:it
-  it can be read do: {
-    var tree is WordTree new: '../c/dict'.
-    tree contains: 'test', should = True.
-    tree destruct.
-  }.
-  it can filter existing words do: {
-    var tree is WordTree new: '../c/dict'.
-    tree filter: 'test', should = ['test'].
-    tree destruct.
-  }.
-  it can filter nonexistent words do: {
-    var tree is WordTree new: '../c/dict'.
-    tree filterSorted: 'fest', count should not = 0.
+  it can handle shitty UTF8 characters do: {
+    var tree is WordTree new: '../c/dict-fa' withFormat: 'a166fاs32'.
+    tree filterSorted: 'یبیل', count should = 0.
     tree destruct.
   }.
   it can determine the levenshtein edit distance of two words do: {
