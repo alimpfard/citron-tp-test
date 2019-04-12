@@ -46,6 +46,7 @@ var WordTree is Object cnew: {
 
   on: 'filterSorted:' do: {:str
     var len is const tree_filter_if_not_exist_sorted applyTo: my tree and: str and: my space and: my size.
+    Pen writeln: len.
     len = -1 ifTrue: { ^[str]. }.
     len = 0  ifTrue: { ^[]. }.
     var space is my space.

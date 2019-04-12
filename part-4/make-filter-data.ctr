@@ -40,12 +40,12 @@ var keyboardLayout is [
     ## persian
     'ضصثقفغعهخحجچ',
     '',
-    'شسىبلاتنمکگ',
+    'شس\u6ccبلاتنمکگ',
     '',
     'ظطزرذدپو'
 ] fmap!: \:x x characters.
 
-var alphabet_first_f is 'ا'. #'a'
+var alphabet_first_f is 'آ'. #'a'
 var alphabet_first is alphabet_first_f codepoint - 1.
 
 var rowCounts is keyboardLayout fmap: \:x x count.

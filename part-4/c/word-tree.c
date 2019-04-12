@@ -13,9 +13,12 @@
 #endif
 
 int enc_simple(WIDE_CHAR_T c, word_tree_t tree) {
+  if (c == 0x200c) // zwnj = EOW
+    return 0;
   int x = (int)(c - tree->alphabet_first + 1);
-  if (x >= tree->alphabet_count)
-    printf("Value out of range") && (abort(),0);
+  if (x >= tree->alphabet_count || x < 0)
+    return 0; // treat anything we can't deal with as EOW
+    // printf("Value out of range") && (abort(),0);
   return x;
 }
 
@@ -254,7 +257,7 @@ void conditional_dfs_into(struct word_tree_node *node, int sl, char const**vec,
     return;
   if (*idx == vs)
     return;
-  if (node->cells[0] && node->cells[0]->filter_data.proj_prob > MIN_ACCEPTABLE_PROB) {
+  if (node->cells[0] && node->cells[0]->filter_data.data_ptr && node->cells[0]->filter_data.proj_prob > MIN_ACCEPTABLE_PROB) {
     // printf("idx %d will have '%s'\n", *idx,
     // node->cells[0]->filter_data.data_ptr);
     vec[(*idx)++] = node->cells[0]->filter_data.data_ptr;

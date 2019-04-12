@@ -18,15 +18,16 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] outfile { File new: 'outfile', open: 'w+' }.
 
   it can tokenise and detect spelling mistakes do: {:thisTest
-    var allTargetTexts is (
-      File
-        list: 'samples',
-        filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
-        take: 1,
-        asGenerator fmap: \:descr (File new: 'samples/' + (descr @ 'file'), read)
-    ).
+    var allTargetTexts is [File new: 'samples/sample2', read] asGenerator.
+    # (
+    #   File
+    #     list: 'samples',
+    #     filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
+    #     take: 1,
+    #     asGenerator fmap: \:descr (File new: 'samples/' + (descr @ 'file'), read)
+    # ).
     thisTest tests: 'WordTree'.
-    var tree is WordTree new: 'dict' withFormat: 'a166fاs32'.
+    var tree is WordTree new: '../c/dict-fa' withFormat: 'a171fآs32'.
 
     thisTest tests: 'Spellcheck'.
     var consolidated is analyser
