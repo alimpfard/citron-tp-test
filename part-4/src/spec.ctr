@@ -27,7 +27,7 @@ describe TokenAnalyser do: {:it:let
     #     asGenerator fmap: \:descr (File new: 'samples/' + (descr @ 'file'), read)
     # ).
     thisTest tests: 'WordTree'.
-    var tree is WordTree new: '../c/dict-fa' withFormat: 'a171fآs32'.
+    var tree is WordTree new: '../c/dict-fa'.
 
     thisTest tests: 'Spellcheck'.
     var consolidated is analyser

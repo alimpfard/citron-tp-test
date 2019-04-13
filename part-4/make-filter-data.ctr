@@ -81,16 +81,23 @@ var keyfmap is Map new.
 }.
 
 var data is File new: 'data.c', open: 'w+'.
-data write: '[0] = (mapv*[]) { 0 },\n'.
+data write: '#ifdef FILTER_DATA\n'.
+data write: '{\n'.
+data write: '\t[0] = (mapv*[]) { 0 },\n'.
 keyfmap each: {:k:v
   Pen writeln: 'character \'${{k}}$\'codepoint ${{k codepoint}}$ with diff ${{k codepoint - alphabet_first}}$'.
     data write: '// character $$k codepoint ${{k codepoint}}$\n[${{k codepoint - alphabet_first}}$] = (mapv*[]) {\n'.
     v each: {:k:v
-        data write: '&(mapv) {${{k codepoint - alphabet_first}}$, ${{v}}$},\n\t'.
+        data write: '\t\t&(mapv) {${{k codepoint - alphabet_first}}$, ${{v}}$},\n'.
     }.
-    data write: '0\n\t},\n'.
+    data write: '\t\t0\n\t},\n'.
 }.
+data write: '}\n'.
+data write: '#endif // FILTER_DATA\n'.
 
+data write: '#ifdef TREE_DATA\n'.
+data write: '{\n\t.format = "a${{keyboardLayout flatten fmap: \:x x codepoint, max - alphabet_first}}$f${{alphabet_first_f}}$"\n}\n'.
+data write: '#endif // TREE_DATA\n'.
 Pen writeln: 'format: \'a${{keyboardLayout flatten fmap: \:x x codepoint, max - alphabet_first}}$f${{alphabet_first_f}}$\''.
 
 data close.

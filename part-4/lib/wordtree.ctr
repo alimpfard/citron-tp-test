@@ -20,15 +20,12 @@ Inject
 .
 
 var WordTree is Object cnew: {
-  on: 'new:withFormat:' do: {:dict:fmt
+  on: 'new:' do: {:dict
     ^me cnew: {
-      tree => const tree_freadf[dict, fmt, 1].
+      tree => const tree_freadf[dict, 1].
       size => 512.
       space => const malloc[my size * 8].
     }.
-  }.
-  on: 'new:' do: {:dict
-    ^me new: dict withFormat: 'a26fas64'.
   }.
 
   on: 'contains:' do: {:str

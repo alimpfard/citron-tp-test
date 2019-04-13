@@ -64,7 +64,7 @@ typedef word_tree* word_tree_t;
  *
  * @return - the created tree
  */
-word_tree_t tree_freadf(const char *path, const char *format, int rd_mode);
+word_tree_t tree_freadf(const char *path, int rd_mode);
 
 /**
  * Frees the given tree

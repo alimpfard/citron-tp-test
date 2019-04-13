@@ -104,13 +104,13 @@ void tree_free(word_tree_t tree) {
   free(tree);
 }
 
-word_tree_t tree_freadf(const char *path, const char *format, int rd_mode) {
+word_tree_t tree_freadf(const char *path, int rd_mode) {
   int alphabet_count = 26;
   int initial_size = 16;
   decoder_fn_ptr_t decoder = &dec_simple;
   encoder_fn_ptr_t encoder = &enc_simple;
   WIDE_CHAR_T alphabet_first = L'a';
-
+  const char* format = tree_data.format;
   // parse format spec
   // a<int>  -- set [a]lphabet count
   // f<char> -- set [f]irst character in alphabet
@@ -361,11 +361,11 @@ int tree_filter_if_not_exist_sorted(word_tree_t tree, char *str, char const**fil
 
 #ifdef TEST
 int main(int argc, char **argv) {
-  if (argc < 4)
+  if (argc < 3)
     return 1;
-  word_tree_t tree = tree_freadf(argv[1], argv[2], TREE_RD_MODE_PLAIN);
+  word_tree_t tree = tree_freadf(argv[1], TREE_RD_MODE_PLAIN);
   char *vec[1024];
-  char *sstr = argv[3];
+  char *sstr = argv[2];
   int st = tree_filter_if_not_exist(tree, sstr, (char const**) vec, 1024);
   if (st == -1)
     puts("That word exists in the dict");
