@@ -18,7 +18,7 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] outfile { File new: 'outfile', open: 'w+' }.
 
   it can tokenise and detect spelling mistakes do: {:thisTest
-    var allTargetTexts is [File new: 'samples/sample2', read] asGenerator.
+    var allTargetTexts is (2..100) fmap: (\:x File new: 'samples/sample$$x', read).
     # (
     #   File
     #     list: 'samples',

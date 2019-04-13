@@ -5,10 +5,10 @@ import
   Library/Data/Set/HashSet: 'HashSet'.
 
 import
-  # gsl: [
-  #   'SparseMatrix',
-  #   'Vector'
-  # ]
+  gsl: [
+    'SparseMatrix',
+    'Vector'
+  ]
   wordtree: 'WordTree'
 .
 
@@ -83,7 +83,7 @@ var TokenAnalyser is Object cnew: {
   }.
 
   on: 'spellcheckAndFix:withDictionaryTree:' do: {:str:tree
-    Pen writeln: 'sort for $$str'.
+    # Pen writeln: 'sort for $$str'.
     var sugg is tree filterSorted: str.
     sugg count = 0 ifTrue: {
       ^[str, '<no suggestions>'].
@@ -97,6 +97,7 @@ var TokenAnalyser is Object cnew: {
   on: 'spellcheck:withDictionaryTree:pre:post:' do: {:self:coll:tree:pre:post
     ^coll foldl: {:acc:str
       ^acc + (self split: str, fmap: {:str
+        post run.
         isPunctuation[str] ifTrue: { ^[str, '<correct>']. }.
         ^self spellcheckAndFix: str withDictionaryTree: tree.
       }, toArray).
