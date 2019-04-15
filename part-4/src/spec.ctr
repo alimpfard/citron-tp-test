@@ -16,9 +16,10 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] analyser { TokenAnalyser with: lexer }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
   let[Reflect thisContext] outfile { File new: 'outfile', open: 'w+' }.
+  let[Reflect thisContext] limit { 500 }.
 
   it can tokenise and detect spelling mistakes do: {:thisTest
-    var allTargetTexts is (2..100) fmap: (\:x File new: 'samples/sample$$x', read).
+    var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'samples/sample$$x', read).
     # (
     #   File
     #     list: 'samples',
@@ -30,6 +31,7 @@ describe TokenAnalyser do: {:it:let
     var tree is WordTree new: '../c/dict-fa'.
 
     thisTest tests: 'Spellcheck'.
+    thisTest progressesUpTo: limit.
     var consolidated is analyser
       spellcheck: allTargetTexts
       withDictionaryTree: tree

@@ -95,9 +95,11 @@ var TokenAnalyser is Object cnew: {
   }.
 
   on: 'spellcheck:withDictionaryTree:pre:post:' do: {:self:coll:tree:pre:post
+    var i is 0.
     ^coll foldl: {:acc:str
+      pre applyTo: (i +=: 1).
+      post run.
       ^acc + (self split: str, fmap: {:str
-        post run.
         isPunctuation[str] ifTrue: { ^[str, '<correct>']. }.
         ^self spellcheckAndFix: str withDictionaryTree: tree.
       }, toArray).
