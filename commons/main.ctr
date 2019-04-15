@@ -86,10 +86,10 @@ var TokenAnalyser is Object cnew: {
     # Pen writeln: 'sort for $$str'.
     var sugg is tree filterSorted: str.
     sugg count = 0 ifTrue: {
-      ^[str, '<no suggestions>'].
+      ^[str, ['<no suggestions>']].
     }.
     sugg head = str ifTrue: {
-      ^[str, '<correct>'].
+      ^[str, ['<correct>']].
     }.
     ^[str, sugg from: 0 lengthMax: 3].
   }.
@@ -100,7 +100,7 @@ var TokenAnalyser is Object cnew: {
       pre applyTo: (i +=: 1).
       post run.
       ^acc + (self split: str, fmap: {:str
-        isPunctuation[str] ifTrue: { ^[str, '<correct>']. }.
+        isPunctuation[str] ifTrue: { ^[str, ['<correct>']]. }.
         ^self spellcheckAndFix: str withDictionaryTree: tree.
       }, toArray).
     } accumulator: Array new.

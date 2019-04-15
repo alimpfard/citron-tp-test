@@ -40,7 +40,7 @@ describe TokenAnalyser do: {:it:let
     #{
       outfile write: (
         #analyser prettyPrint: consolidated tokens: allTokens toArray
-        consolidated fmap: (\:x x join: '\t\n'), join: '\n'
+        consolidated fmap: (\:x '%s -- %L' % x), join: '\n'
       ).
     #} should output: testfile read to: outfile.
   }.
