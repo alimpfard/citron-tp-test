@@ -1,0 +1,14 @@
+import
+  gsl: 'SparseMatrix'
+.
+
+var N-gram is Object cnew: {
+  on: 'new:' do: {:N
+    ^cnew: {
+      n => N.
+      #------ NGram Sparse Space :: #
+    }.
+  }.
+
+  on: ''
+}.

@@ -1,0 +1,3 @@
+[submodule "part-5/c/sparse-ndarray"]
+	path = part-5/c/sparse-ndarray
+	url = https://github.com/alimpfard/sparse-ndarray

@@ -126,6 +126,13 @@ var SparseMatrix is Object cnew: {
       matrixaddr => my matrix get.
     }.
   }.
+  on: 'newWithXSize:andYSize:andType:' do: {:xs:ys:type
+    ^SparseMatrix cnew: {
+      oldErrorHandler => const gsl_set_error_handler_off[].
+      matrix => const gsl_spmatrix_alloc_nzmax[xs, ys, 1, type].
+      matrixaddr => my matrix get.
+    }.
+  }.
   on: 'new' do: { ^me new: const GSL_SPMATRIX_TRIPLET. }.
   on: 'applyAll:' do: {:args
     ^SparseMatrix cnew: {

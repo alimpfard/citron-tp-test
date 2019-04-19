@@ -18,5 +18,8 @@ Lexer + Token Type Detection
 #### [Part-3](part-3/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-3/spec.ctr)
 Stopword detection
 
-#### [Part-4](part-4/src/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-4/src/spec.ctr) (not complete)
+#### [Part-4](part-4/src/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-4/src/spec.ctr)
 Spellcheck
+
+#### [Part-5](part-5/src/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-4/src/spec.ctr) (not complete)
+Bigram Analysis

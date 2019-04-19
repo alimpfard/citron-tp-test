@@ -26,6 +26,9 @@ var Lexer is Object cnew: {
         String compileRegex: 's/%s/%s/gmuW' % x.
     }.
   }.
+  on: 'splitRegex:' do: {:regex
+    fReg => String compileRegex: regex.
+  }.
   on: 'normalise:' do: {:&str
     str is my collateReg foldl: {:acc:x
       ^acc ~ x.
