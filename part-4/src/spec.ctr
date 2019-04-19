@@ -27,8 +27,11 @@ describe TokenAnalyser do: {:it:let
     #     take: 1,
     #     asGenerator fmap: \:descr (File new: 'samples/' + (descr @ 'file'), read)
     # ).
+
+    lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
+
     thisTest tests: 'WordTree'.
-    var tree is WordTree new: '../c/dict-fa'.
+    var tree is WordTree new: 'dict'.
 
     thisTest tests: 'Spellcheck'.
     thisTest progressesUpTo: limit.
