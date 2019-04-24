@@ -1,0 +1,13 @@
+import Library/Foreign/Interop/C.
+
+Inject
+  importFunctionsOrTypes: [
+    'malloc', 'free', 'realloc'
+  ]
+  fromHeaders: ['stdlib.h']
+  andLibraries: ['c']
+.
+
+var malloc is malloc.
+var free is free.
+var realloc is realloc.

@@ -1,0 +1,79 @@
+import Library/Foreign/Interop/C.
+import libc: \*.
+Inject addLibraryPath: '.'.
+Inject addIncludePath: '.'.
+Inject importFunctionsOrTypes: [
+    'spndarray_alloc', 'spndarray_set_fillvalue', 'spndarray_free',
+    'spndarray_set_zero', 'spndarray_nnz', 'spndarray_memcpy',
+    'spndarray_get', 'spndarray_set', 'spndarray_ptr', 'spndarray_incr',
+    'reduce_sum', 'reduce_mean', 'spndarray_reduce', 'spndarray_mul',
+    'spndarray_add'
+  ]
+  fromHeaders: ['../c/sparse-ndarray/spndarray.h'] andLibraries: ['spndarray'].
+
+CodeBlock on: '&symbol' do: {
+  ^my symbol run.
+}.
+
+var SparseArray is Object cnew: {
+  me genAccessors: ['sizes', 'ndim', 'array'].
+  me on: 'newWithDimensionSizes:andFillValue:' do: {:dims:fv
+    var ndim is dims count.
+    ^me cnew: {
+      my array is const spndarray_alloc applyAll: [ndim, dims].
+      const spndarray_set_fillvalue applyAll: [my array, fv].
+      my sizes is dims.
+      my ndim is ndim.
+    }.
+  }.
+  me on: 'newWithDimensionSizes:' do: {:dims
+    ^me newWithDimensionSizes: dims andFillValue: 0.
+  }.
+  me on: 'newWithArray:' do: {:arr
+    ^cnew: {
+      array => arr.
+      sizes => Nil. # TODO
+      ndim => Nil. # TODO
+    }.
+  }.
+  me on: 'destruct' do: {
+    const spndarray_free applyAll: [my array].
+    my array is Nil.
+  }.
+  me on: 'setZero' do: {
+    const spndarray_set_zero applyAll: [my array].
+  }.
+  me on: 'count' do: {
+    ^const spndarray_nnz applyAll: [my array].
+  }.
+  me on: 'at:' do: {:idx
+    ^const spndarray_get applyAll: [my array, idx].
+  }.
+  me on: 'put:at:' do: {:val:idx
+    const spndarray_set applyAll: [my array, val, idx].
+  }.
+  me on: 'incrementAt:' do: {:idx
+    const spndarray_incr applyAll: [my array, idx].
+  }.
+  me on: 'sum:' do: {:dim
+    ^newWithArray: (const spndarray_reduce applyAll: [my array, dim, reduce_sum &symbol]).
+  }.
+  me on: 'mean:' do: {:dim
+    ^newWithArray: (const spndarray_reduce applyAll: [my array, dim, reduce_mean &symbol]).
+  }.
+  me on: 'multiply:' do: {:other
+    ^newWithArray: (const spndarray_mul applyAll: [my array, other array, -1]).
+  }.
+  me on: 'multiply:throughDimension:' do: {:other:dim
+    ^newWithArray: (const spndarray_mul applyAll: [my array, other array, dim]).
+  }.
+  me on: 'add:' do: {:other
+    ^newWithArray: (const spndarray_add applyAll: [my array, other array]).
+  }.
+  me
+    learn: '+' means: 'add:',
+    learn: '*' means: 'multiply:'.
+  me on: 'applyAll:' do: {:idx
+    ^me at: idx.
+  }.
+}.

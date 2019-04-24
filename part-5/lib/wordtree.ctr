@@ -1,0 +1,59 @@
+import Library/Foreign/Interop/C.
+import libc: \*.
+
+Inject addLibraryPath: '.'.
+Inject addIncludePath: '.'.
+Inject
+  importFunctionsOrTypes: [
+    'tree_freadf',
+    'tree_filter_if_not_exist',
+    'tree_filter_if_not_exist_sorted',
+    'tree_exists',
+    'tree_free',
+    'TREE_RD_MODE_PLAIN',
+    ##
+    'levenshtein'
+    #,##
+    #'malloc', 'free', 'realloc'
+  ]
+  fromHeaders: ['../c/wordtree/word-tree.h', 'stdlib.h']
+  andLibraries: ['wordtree', 'c']
+.
+
+var WordTree is Object cnew: {
+  on: 'new:' do: {:dict
+    ^me cnew: {
+      tree => const tree_freadf[dict, 1].
+      size => 512.
+      space => const malloc[my size * 8].
+    }.
+  }.
+
+  on: 'contains:' do: {:str
+    ^const tree_exists[my tree, str] = 1.
+  }.
+  on: 'filter:' do: {:str
+    var len is const tree_filter_if_not_exist[my tree, str, my space, my size].
+    len = -1 ifTrue: { ^[str]. }.
+    len = 0  ifTrue: { ^[]. }.
+    var space is my space.
+    ^Array new fill: len with: {:idx
+      ^(space + (idx * 8)) derefAs: space, readCString.
+    }.
+  }.
+
+  on: 'filterSorted:' do: {:str
+    var len is const tree_filter_if_not_exist_sorted applyTo: my tree and: str and: my space and: my size.
+    #Pen writeln: len.
+    len = -1 ifTrue: { ^[str]. }.
+    len = 0  ifTrue: { ^[]. }.
+    var space is my space.
+    ^Array new fill: len with: {:idx
+      ^(space + (idx * 8)) derefAs: space, readCString.
+    }.
+  }.
+  on: 'destruct' do: {
+    const free[my space].
+    const tree_free[my tree].
+  }.
+}.

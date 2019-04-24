@@ -1,0 +1,51 @@
+Broom memoryLimit: 1024 * 1024 * 1024 * 4.
+
+import main: \*.
+import
+  Library/Test: 'describe'
+.
+
+#:language XFrozen
+
+describe TokenAnalyser do: {:it:let
+  it exists do: {
+    { TokenAnalyser. } should not raiseError: String.
+  }.
+
+  let[Reflect thisContext] lexer { Lexer }.
+  let[Reflect thisContext] analyser { TokenAnalyser with: lexer }.
+  let[Reflect thisContext] glblctx { Reflect thisContext }.
+  let[Reflect thisContext] outfile { File new: 'outfile', open: 'w+' }.
+  let[Reflect thisContext] limit { 500 }.
+
+  it can tokenise and detect spelling mistakes do: {:thisTest
+    var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'samples/sample$$x', read).
+    # (
+    #   File
+    #     list: 'samples',
+    #     filter: (\:_:descr (descr @ 'type' = 'file') & (descr @ 'file' startsWith: 'sample')),
+    #     take: 1,
+    #     asGenerator fmap: \:descr (File new: 'samples/' + (descr @ 'file'), read)
+    # ).
+
+    lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
+
+    thisTest tests: 'WordTree'.
+    var tree is WordTree new: 'dict'.
+
+    thisTest tests: 'Spellcheck'.
+    thisTest progressesUpTo: limit.
+    var consolidated is analyser
+      spellcheck: allTargetTexts
+      withDictionaryTree: tree
+      pre: {:i thisTest progress: i + 1. }
+      post: { thisTest show. }.
+    #{
+      outfile write: (
+        #analyser prettyPrint: consolidated tokens: allTokens toArray
+        consolidated fmap: (\:x '%s -- %L' % x), join: '\n'
+      ).
+    #} should output: testfile read to: outfile.
+  }.
+
+}.

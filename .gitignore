@@ -2,3 +2,5 @@ selection/consolidate*
 **/sample*
 commons/selection/*/sample*
 perf-hash
+*.so
+*.o
