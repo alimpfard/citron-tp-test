@@ -1,6 +1,8 @@
 import
   Library/Foreign/Interop/C.
 
+import libc: \*.
+
 Inject
   importFunctionsOrTypes: [
     # 'gsl_spmatrix',
@@ -15,9 +17,7 @@ Inject
     # vector
     'gsl_vector_alloc', 'gsl_vector_calloc', 'gsl_vector_free',
     'gsl_vector_get', 'gsl_vector_set', 'gsl_vector_ptr',
-    'gsl_vector_set_zero',
-    # libc
-    'malloc', 'free'
+    'gsl_vector_set_zero'
   ]
   fromHeaders: ['string.h', 'gsl/gsl_spmatrix.h', 'gsl/gsl_statistics.h', 'gsl/gsl_vector.h']
   andLibraries: ['gslcblas', 'gsl', 'm']

@@ -10,6 +10,7 @@ import
     'Vector'
   ]
   wordtree: 'WordTree'
+  spndarray: 'SparseArray'
 .
 
 #:language XFrozen
@@ -529,6 +530,93 @@ var TokenAnalyser is Object cnew: {
     op delete.
     op2 delete.
     ^ff.
+  }.
+}.
+
+var ShiftingWindow is Object cnew: {
+  on: 'newOfSize:on:' do: {:sz:it
+    ^cnew: {
+      size => sz.
+      arr => it.
+    }.
+  }.
+  on: 'each_v:' do: {:blk
+    var sz is my size.
+    var arr is my arr.
+    arr count <=: sz, ifTrue: {
+      blk applyTo: arr + (['\\e'] * (sz - arr count)).
+      ^me.
+    }.
+    0 to: arr count - sz step: 1 do: {:st
+      blk applyTo: (arr from: st lengthMax: sz).
+    }.
+  }.
+  on: 'fmap:' do: {:blk
+    var sz is my size.
+    var arr is my arr.
+    var res is Array new: (arr count / sz) floor.
+    arr count <=: sz, ifTrue: {
+      res push: (blk applyTo: arr + ([Nil] * (sz - arr count))).
+      ^res.
+    }.
+    0 to: arr count - sz step: 1 do: {:st
+      res push: (blk applyTo: (arr from: st lengthMax: sz)).
+    }.
+    ^res.
+  }.
+}.
+
+var NGramHelper is Object cnew: {
+  on: 'splitSentences:withLexer:' do: {:text:lex
+    var gen is lex splitGen: text.
+    var genv is gen fmap: {:c
+      c = '.' ifTrue: { ^['\\$', c, '\\e']. }.
+      var res is Array < '\\$' ; c.
+      { ^'.' = c. } whileFalse: {
+        c is const gen next.
+        '.' = c ifTrue: {
+          True break.
+        } ifFalse: {
+          c isNil break.
+          res push: c.
+        }.
+      }.
+      res push: '\\e'.
+      ^res.
+    }.
+    ^genv.
+  }.
+  on: 'shiftingWindowOfSize:on:' do: {:size:arr
+    ^const ShiftingWindow newOfSize: size on: arr.
+  }.
+  on: 'resolveTokens:withMap:' do: {:&seq:&map
+    seq fmap!: {:tok
+      var res is map at: tok.
+      res isNil ifTrue: {
+        res is map count + 1.
+        map put: res at: tok.
+        ^res.
+      } ifFalse: {
+        ^res.
+      }.
+    }.
+  }.
+  on: 'ngramCountWithN:onTexts:withLexer:pre:post:' do: {:self:N:targetTexts:lexer:pre:post
+    var tokensMap is HashMap new.
+    var bigramCount is SparseArray newWithDimensionSizes: [1] * N.
+    allTargetTexts each: {:i:targetText
+      pre[i].
+      self splitSentences: targetText withLexer: lexer, each_v: {:&sentence
+        self shiftingWindowOfSize: N on: sentence, each_v: {:&seq
+          self resolveTokens: seq withMap: tokensMap. # modifies `seq'
+          bigramCount incrementAt: seq.
+          seq put: 0 at: N - 1.
+          bigramCount incrementAt: seq. # count goes in the last dim, idx 0
+        }.
+      }.
+      post[i].
+    }.
+    ^[bigramCount, tokensMap].
   }.
 }.
 

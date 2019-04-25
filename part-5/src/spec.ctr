@@ -13,12 +13,13 @@ describe TokenAnalyser do: {:it:let
   }.
 
   let[Reflect thisContext] lexer { Lexer }.
-  let[Reflect thisContext] analyser { TokenAnalyser with: lexer }.
+  let[Reflect thisContext] analyser { NGramHelper }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
-  let[Reflect thisContext] outfile { File new: 'outfile', open: 'w+' }.
-  let[Reflect thisContext] limit { 500 }.
+  let[Reflect thisContext] tokenmap { File new: 'tokenMap', open: 'w+' }.
+  let[Reflect thisContext] limit { 1000 }.
+  let[Reflect thisContext] ngram-N { 3 }.
 
-  it can tokenise and detect spelling mistakes do: {:thisTest
+  it can tokenise and calculate NGram do: {:thisTest
     var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'samples/sample$$x', read).
     # (
     #   File
@@ -30,22 +31,26 @@ describe TokenAnalyser do: {:it:let
 
     lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
 
-    thisTest tests: 'WordTree'.
-    var tree is WordTree new: 'dict'.
+    thisTest tests: '${{ngram-N}}$-gram'.
+    thisTest progressesUpTo: limit - ngram-N + 1.
+    var res is analyser
+      ngramCountWithN: ngram-N
+      onTexts: allTargetTexts
+      withLexer: lexer
+      pre: {:i thisTest progress: i.}
+      post: {:i thisTest show.}.
+    var tokenTable is res last.
+    var ngramCount is res head.
+    var ngramCountVec is ngramCount extractDimension: ngram-N - 1 atIndex: 0, multiplicativeInverse.
+    ngramCountVec writeInto: 'countinv'.
+    var ngramProb is ngramCount multiply: ngramCountVec throughDimension: ngram-N - 1.
 
-    thisTest tests: 'Spellcheck'.
-    thisTest progressesUpTo: limit.
-    var consolidated is analyser
-      spellcheck: allTargetTexts
-      withDictionaryTree: tree
-      pre: {:i thisTest progress: i + 1. }
-      post: { thisTest show. }.
-    #{
-      outfile write: (
-        #analyser prettyPrint: consolidated tokens: allTokens toArray
-        consolidated fmap: (\:x '%s -- %L' % x), join: '\n'
-      ).
-    #} should output: testfile read to: outfile.
+    ngramCount writeInto: 'count'.
+    ngramProb writeInto: 'prob'.
+    tokenTable each: {:k:v
+      tokenmap write: '$$k : $$v \n'.
+    }.
+    tokenmap close.
   }.
 
 }.

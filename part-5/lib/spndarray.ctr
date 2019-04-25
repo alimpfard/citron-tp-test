@@ -7,7 +7,8 @@ Inject importFunctionsOrTypes: [
     'spndarray_set_zero', 'spndarray_nnz', 'spndarray_memcpy',
     'spndarray_get', 'spndarray_set', 'spndarray_ptr', 'spndarray_incr',
     'reduce_sum', 'reduce_mean', 'spndarray_reduce', 'spndarray_mul',
-    'spndarray_add'
+    'spndarray_add', 'spndarray_fwrite', 'spndarray_reduce_dimension',
+    'spndarray_mul_vec', 'spndarray_mulinverse'
   ]
   fromHeaders: ['../c/sparse-ndarray/spndarray.h'] andLibraries: ['spndarray'].
 
@@ -61,11 +62,20 @@ var SparseArray is Object cnew: {
   me on: 'mean:' do: {:dim
     ^newWithArray: (const spndarray_reduce applyAll: [my array, dim, reduce_mean &symbol]).
   }.
+  me on: 'extractDimension:atIndex:' do: {:dim:idx
+    ^newWithArray: (const spndarray_reduce_dimension applyAll: [my array, dim, idx]).
+  }.
   me on: 'multiply:' do: {:other
     ^newWithArray: (const spndarray_mul applyAll: [my array, other array, -1]).
   }.
   me on: 'multiply:throughDimension:' do: {:other:dim
     ^newWithArray: (const spndarray_mul applyAll: [my array, other array, dim]).
+  }.
+  me on: 'multiplyVector:throughDimension:' do: {:vec:dim
+    ^newWithArray: (const spndarray_mul_vec applyAll: [my array, vec array, dim]).
+  }.
+  me on: 'multiplicativeInverse' do: {
+    const spndarray_mulinverse[my array].
   }.
   me on: 'add:' do: {:other
     ^newWithArray: (const spndarray_add applyAll: [my array, other array]).
@@ -75,5 +85,8 @@ var SparseArray is Object cnew: {
     learn: '*' means: 'multiply:'.
   me on: 'applyAll:' do: {:idx
     ^me at: idx.
+  }.
+  me on: 'writeInto:' do: {:fp
+    const spndarray_fwrite[my array, '%f,\n', fp, 0].
   }.
 }.
