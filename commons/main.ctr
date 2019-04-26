@@ -571,6 +571,7 @@ var NGramHelper is Object cnew: {
     ^cnew: {
       shiftingWindow => const ShiftingWindow newOfSize: n.
       size => n.
+      ivcount => 0.
     }.
   }.
   on: 'splitSentences:withLexer:' do: {:text:lex
@@ -596,10 +597,11 @@ var NGramHelper is Object cnew: {
     ^my shiftingWindow on: arr.
   }.
   on: 'resolveTokens:withMap:' do: {:&seq:&map
+    var &ivcount is my ivcount.
     seq fmap!: {:tok
       var res is map at: tok.
       res isNil ifTrue: {
-        res is map count +=: 1.
+        res is ivcount +=: 1.
         map put: res at: tok.
         ^res.
       } ifFalse: {

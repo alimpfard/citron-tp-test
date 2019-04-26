@@ -1,0 +1,18 @@
+var timerDataF is HashMap new.
+var lastTimerF is ''.
+var lastTime is 0.
+Reflect globalInstrument: {:obj:msg:args
+  var &lastTime is const lastTime.
+  var newtime is Clock processorClock.
+  var time is newtime - lastTime.
+  &&lastTime is newtime.
+  var &lastTimerF is const lastTimerF.
+  var key is '${{obj type}}$#${{msg}}$'.
+  const timerDataF contains: lastTimerF, ifFalse: {
+    const timerDataF put: [0,0] at: lastTimerF.
+  }.
+  const timerDataF at: lastTimerF, head +=: time.
+  const timerDataF at: lastTimerF, last +=: 1.
+  lastTimerF swapRefs: key.
+}.
+Reflect enableInstrumentation.

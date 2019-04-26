@@ -15,8 +15,8 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] lexer { Lexer }.
   let[Reflect thisContext] analyser { NGramHelper }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
-  let[Reflect thisContext] tokenmap { File new: 'tokenMap', open: 'w+' }.
-  let[Reflect thisContext] limit { 10000 }.
+  let[Reflect thisContext] tokenmap { File new: 'tokenMap', open: 'r' }.
+  let[Reflect thisContext] limit { 1000 }.
   let[Reflect thisContext] ngram-N { 2 }.
 
   var fancy-name is {\:ex
@@ -31,7 +31,7 @@ describe TokenAnalyser do: {:it:let
   it can tokenise and calculate NGram do: {:thisTest
     var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'samples/sample$$x', read).
 
-    lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
+    # lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
 
     thisTest tests: '${{fancy-name[ngram-N]}}$gram'.
     thisTest progressesUpTo: limit - ngram-N + 1.
@@ -40,8 +40,6 @@ describe TokenAnalyser do: {:it:let
       withLexer: lexer
       pre: {:i thisTest progress: i.}
       post: {:i thisTest show.}.
-
-    Reflect disableInstrumentation.
 
     var tokenTable is res last.
     var ngramCount is res head.
@@ -54,7 +52,6 @@ describe TokenAnalyser do: {:it:let
     tokenTable each: {:k:v
       tokenmap write: '$$k : $$v \n'.
     }.
-
     tokenmap close.
   }.
 
