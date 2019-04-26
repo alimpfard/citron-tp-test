@@ -21,5 +21,5 @@ Stopword detection
 #### [Part-4](part-4/src/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-4/src/spec.ctr)
 Spellcheck
 
-#### [Part-5](part-5/src/spec.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-5/src/spec.ctr) (not complete)
+#### [Part-5](part-5/src/spec-part2.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-5/src/spec-part2.ctr)
 N-gram Analysis
