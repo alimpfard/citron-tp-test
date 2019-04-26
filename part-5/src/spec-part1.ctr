@@ -24,10 +24,11 @@ describe TokenAnalyser do: {:it:let
       case: 2 do: {\ 'bi'},
       case: 3 do: {\ 'tri'},
       case: 4 do: {\ 'quadri'},
-      default: {\ 'insane'}) switch: ex.
+      default:    {\ 'insane'}) switch: ex.
   }.
+
   it can tokenise and calculate NGram do: {:thisTest
-    var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'dummysamples/sample${{'%.03d' % [x]}}$', read).
+    var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'samples/sample$$x', read).
 
     lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
 

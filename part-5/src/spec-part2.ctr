@@ -1,4 +1,4 @@
-Broom memoryLimit: 1024 * 1024 * 1024 * 4.
+Broom memoryLimit: 1024 * 1024 * 1024 * 8.
 
 import main: \*.
 import
@@ -16,18 +16,20 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] analyser { NGramHelper }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
   let[Reflect thisContext] tokenmap { File new: 'tokenMap', open: 'w+' }.
-  let[Reflect thisContext] limit { 190 }.
+  let[Reflect thisContext] limit { 10000 }.
   let[Reflect thisContext] ngram-N { 2 }.
+
   var fancy-name is {\:ex
     (frozen _ is Number
       case: 1 do: {\ 'uni'},
       case: 2 do: {\ 'bi'},
       case: 3 do: {\ 'tri'},
       case: 4 do: {\ 'quadri'},
-      default: {\ 'insane'}) switch: ex.
+      default:    {\ 'insane'}) switch: ex.
   }.
+
   it can tokenise and calculate NGram do: {:thisTest
-    var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'dummysamples/sample${{'%.03d' % [x]}}$', read).
+    var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'samples/sample$$x', read).
 
     lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
 
@@ -38,6 +40,9 @@ describe TokenAnalyser do: {:it:let
       withLexer: lexer
       pre: {:i thisTest progress: i.}
       post: {:i thisTest show.}.
+
+    Reflect disableInstrumentation.
+
     var tokenTable is res last.
     var ngramCount is res head.
     var ngramCountVec is ngramCount extractDimension: ngram-N - 1 atIndex: 0, multiplicativeInverse.
@@ -49,6 +54,7 @@ describe TokenAnalyser do: {:it:let
     tokenTable each: {:k:v
       tokenmap write: '$$k : $$v \n'.
     }.
+
     tokenmap close.
   }.
 

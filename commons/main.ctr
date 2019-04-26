@@ -534,12 +534,12 @@ var TokenAnalyser is Object cnew: {
 }.
 
 var ShiftingWindow is Object cnew: {
-  on: 'newOfSize:on:' do: {:sz:it
+  on: 'newOfSize:' do: {:sz
     ^cnew: {
       size => sz.
-      arr => it.
     }.
   }.
+  on: 'on:' do: {:arr arr => arr. }.
   on: 'each_v:' do: {:blk
     var sz is my size.
     var arr is my arr.
@@ -556,7 +556,7 @@ var ShiftingWindow is Object cnew: {
     var arr is my arr.
     var res is Array new: (arr count / sz) floor.
     arr count <=: sz, ifTrue: {
-      res push: (blk applyTo: arr + ([Nil] * (sz - arr count))).
+      res push: (blk applyTo: arr + (['\\e'] * (sz - arr count))).
       ^res.
     }.
     0 to: arr count - sz step: 1 do: {:st
@@ -567,6 +567,12 @@ var ShiftingWindow is Object cnew: {
 }.
 
 var NGramHelper is Object cnew: {
+  on: 'withN:' do: {:n
+    ^cnew: {
+      shiftingWindow => const ShiftingWindow newOfSize: n.
+      size => n.
+    }.
+  }.
   on: 'splitSentences:withLexer:' do: {:text:lex
     var gen is lex splitGen: text.
     var genv is gen fmap: {:c
@@ -586,14 +592,14 @@ var NGramHelper is Object cnew: {
     }.
     ^genv.
   }.
-  on: 'shiftingWindowOfSize:on:' do: {:size:arr
-    ^const ShiftingWindow newOfSize: size on: arr.
+  on: 'shiftingWindowOn:' do: {:arr
+    ^my shiftingWindow on: arr.
   }.
   on: 'resolveTokens:withMap:' do: {:&seq:&map
     seq fmap!: {:tok
       var res is map at: tok.
       res isNil ifTrue: {
-        res is map count + 1.
+        res is map count +=: 1.
         map put: res at: tok.
         ^res.
       } ifFalse: {
@@ -601,22 +607,36 @@ var NGramHelper is Object cnew: {
       }.
     }.
   }.
-  on: 'ngramCountWithN:onTexts:withLexer:pre:post:' do: {:self:N:targetTexts:lexer:pre:post
-    var tokensMap is HashMap new.
-    var bigramCount is SparseArray newWithDimensionSizes: [1] * N.
+  on: 'ngramCountOnTexts:withLexer:andTokenMap:pre:post:' do: {:self:targetTexts:lexer:tokensMap:pre:post
+    var sentenceCount is 0.
+    var N is my size.
+    var N-1 is N - 1.
+    var ngramCount is SparseArray newWithDimensionSizes: [1] * N.
+
     allTargetTexts each: {:i:targetText
       pre[i].
       self splitSentences: targetText withLexer: lexer, each_v: {:&sentence
-        self shiftingWindowOfSize: N on: sentence, each_v: {:&seq
+        sentenceCount +=: 1.
+        self shiftingWindowOn: sentence, each_v: {:&seq
           self resolveTokens: seq withMap: tokensMap. # modifies `seq'
-          bigramCount incrementAt: seq.
-          seq put: 0 at: N - 1.
-          bigramCount incrementAt: seq. # count goes in the last dim, idx 0
+          ngramCount incrementAt: seq.
+          seq put: 0 at: N-1.
+          ngramCount incrementAt: seq. # count goes in the last dim, idx 0
         }.
       }.
       post[i].
     }.
-    ^[bigramCount, tokensMap].
+    # Pen writeln: 'processed $$sentenceCount sentences'.
+    ^[ngramCount, tokensMap].
+  }.
+  on: 'ngramCountOnTexts:withLexer:pre:post:' do: {:self:targetTexts:lexer:pre:post
+    var tokensMap is HashMap new.
+    ^self
+      ngramCountOnTexts: targetTexts
+      withLexer: lexer
+      andTokenMap: tokensMap
+      pre: pre
+      post: post.
   }.
 }.
 
