@@ -16,7 +16,7 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] analyser { NGramHelper }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
   let[Reflect thisContext] tokenmap { File new: 'tokenMap', open: 'w+' }.
-  let[Reflect thisContext] limit { 190 }.
+  let[Reflect thisContext] limit { 4000 }.
   let[Reflect thisContext] ngram-N { 2 }.
   var fancy-name is {\:ex
     (frozen _ is Number

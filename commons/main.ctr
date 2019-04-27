@@ -640,6 +640,15 @@ var NGramHelper is Object cnew: {
       pre: pre
       post: post.
   }.
+  on: 'probabilityOf:withNGramProb:andTokenMap:andLexer:' do: {:self:str:npr:tmap:lexer
+    var pr is 1.
+    var tks is self splitSentences: str withLexer: lexer, next.
+    self shiftingWindowOn: tks, each_v: {:&seq
+      self resolveTokens: seq withMap: tmap.
+      pr *=: (npr at: seq).
+    }.
+    ^pr.
+  }.
 }.
 
 # StdDev/mean

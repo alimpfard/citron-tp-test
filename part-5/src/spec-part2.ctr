@@ -16,8 +16,8 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] analyser { NGramHelper }.
   let[Reflect thisContext] glblctx { Reflect thisContext }.
   let[Reflect thisContext] tokenmap { File new: 'tokenMap', open: 'r' }.
-  let[Reflect thisContext] limit { 1000 }.
-  let[Reflect thisContext] ngram-N { 2 }.
+  let[Reflect thisContext] limit { 5000 }.
+  let[Reflect thisContext] ngram-N { 3 }.
 
   var fancy-name is {\:ex
     (frozen _ is Number
@@ -31,7 +31,7 @@ describe TokenAnalyser do: {:it:let
   it can tokenise and calculate NGram do: {:thisTest
     var allTargetTexts is (Generator from: 2 to: limit) fmap: (\:x File new: 'samples/sample$$x', read).
 
-    # lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
+    lexer collate: (File new: 'collation', read split: '\n', fmap: {:x ^x split: ' ' max: 1. }).
 
     thisTest tests: '${{fancy-name[ngram-N]}}$gram'.
     thisTest progressesUpTo: limit - ngram-N + 1.

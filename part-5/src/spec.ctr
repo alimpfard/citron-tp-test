@@ -18,6 +18,7 @@ describe TokenAnalyser do: {:it:let
   let[Reflect thisContext] tokenmap { File new: 'tokenMap', open: 'w+' }.
   let[Reflect thisContext] limit { 190 }.
   let[Reflect thisContext] ngram-N { 2 }.
+  let[Reflect thisContext] test-sentence { 'a b b d .' }.
   var fancy-name is {\:ex
     (frozen _ is Number
       case: 1 do: {\ 'uni'},
@@ -44,6 +45,14 @@ describe TokenAnalyser do: {:it:let
     ngramCountVec writeInto: 'countinv'.
     var ngramProb is ngramCount multiply: ngramCountVec throughDimension: ngram-N - 1.
 
+    var pr is analyser withN: ngram-N,
+      probabilityOf: test-sentence
+      withNGramProb: ngramProb
+      andTokenMap:   tokenTable
+      andLexer:      lexer
+    .
+
+    Pen writeln: 'probability of ${{test-sentence}}$ is $$pr'.
     ngramCount writeInto: 'count'.
     ngramProb writeInto: 'prob'.
     tokenTable each: {:k:v
