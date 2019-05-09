@@ -24,5 +24,5 @@ Spellcheck
 #### [Part-5](part-5/src/spec-part2.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-5/src/spec-part2.ctr)
 N-gram Analysis
 
-#### [Part-6/HMM](part-6/hmm.ctr) [(syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-6/hmm.ctr)
+#### [Part-6/HMM](part-6/hmm.ctr) [(train/syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-6/hmm.ctr) [(evaluate/syntax highlight)](https://alimpfard.github.io/citron-ace-editor/index.html?file=https://raw.githubusercontent.com/alimpfard/citron-tp-test/master/part-6/viterbi.ctr)
 Hidden Markov Model / MLE with Viterbi
