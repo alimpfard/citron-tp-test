@@ -1,0 +1,94 @@
+Broom memoryLimit: 1024 * 1024 * 1024 * 4.
+
+var Node is Object cnew: {
+    genAccessors: ['prev', 'score'].
+
+    on: 'new' do: { 
+        ^cnew: { 
+            prev => Nil.
+            score => -10000.
+        }.
+    }.
+    on: 'newWithPrev:andScore:' do: {:prev:score
+        ^cnew: {
+            prev => prev.
+            score => score.
+        }.
+    }.
+    on: 'toString' do: {\
+        'Node{${{my prev}}$, ${{my score}}$}'
+    }.
+}.
+
+var max-with-fn is {:seq:fn
+    var max is Nil.
+    var cmp is Nil.
+    seq each: {:k:el
+        (var ff is fn[k,el]) > cmp | cmp isNil ifTrue: {
+            max is [k,el].
+            cmp is ff.
+        }.
+    }.
+    ^max.
+}.
+
+var viterbi is {:S:T:seq
+    var tbl is seq fmap: \:_ HashMap new.
+    
+    S each: {:k:v
+        tbl at: 0, put: (Node newWithPrev: Nil andScore: (v at: seq head, or: -100)) at: k.
+    }.
+
+    1 to: seq count step: 1 do: {:t
+        S each: {:cur
+            var node is Node new.
+            S each: {:prev
+                var score is (tbl at: t - 1, at: prev, score) + (T at: prev, at: cur, or: -100).
+                score > node score ifTrue: {
+                    node is Node newWithPrev: prev andScore: score.
+                }.
+            }.
+            node score: node score + (S at: cur, at: seq @ t, or: -100).
+            tbl at: t, put: node at: cur.
+        }.
+    }.
+
+    var t is seq count - 1.
+    var L is seq fmap: \:_ ''.
+    
+    L put: max-with-fn[tbl @ t, {\:k:x
+        x score.
+    }] @ 0 at: t.
+
+    {^t > 0.} whileTrue: {
+        L put: (tbl @ t @ (L @ t)) prev at: t - 1.
+        t -=: 1.
+    }.
+    ^L.
+}.
+
+var S is HashMap new.
+var T is HashMap new.
+var gen-map is {:*x 
+    var hm is HashMap new.
+    var g is Generator elementsOf: x.
+    g each: {:_:v
+        hm put: g next at: v.
+    }.
+    ^hm.
+}.
+
+var quote is Object cnew: {
+    on: 'process:' do: {:thing
+        ^thing reSplit: '\\b|(?=\'s)', fmap!: \:x x trim, filter_v: \:x x length.
+    }.
+}.
+
+var model is JSON parse: (File new: 'model.json', read).
+Pen writeln: 'Model: ${{JSON serialize: model}}$', brk.
+{
+    Pen write: '> '.
+    var va is quote process: Program waitForInput trim.
+    var v is viterbi[model @ 'S', model @ 'T', va].
+    Pen writeln: ([v, va] zip fmap!: {\:x x join: '/'.}, join: ', ').
+} forever.

@@ -1,0 +1,61 @@
+Broom memoryLimit: 1024 * 1024 * 1024 * 4.
+
+var logprob is {:V
+    var n is 0.
+    V each: {:_:x n +=: x.}.
+    V fmap!: {:k:v
+        ^(v / n) log.
+    }.
+}.
+
+var train is {:D
+    var S is Map new.
+    var T is Map new.
+
+    var prev is Nil.
+    D each: {:_:v
+        v count !=: 2, continue.
+
+        var token is v head.
+        var label is v last.
+        var &ss is S at: label.
+        ss isNil ifTrue: {
+            ss is Map new.
+            S put: ss at: label.
+        }.
+        var &sv is ss at: token.
+        sv isNil ifTrue: {
+            sv is 1.
+            ss put: sv at: token.
+        } ifFalse: {
+            sv +=: 1.
+        }.
+        prev isNil ifFalse: {
+            var &ss is T at: prev.
+            ss isNil ifTrue: {
+                ss is Map new.
+                T put: ss at: prev.
+            }.
+            var &sv is ss at: label.
+            sv isNil ifTrue: {
+                sv is 1.
+                ss put: sv at: label.
+            } ifFalse: {
+                sv +=: 1.
+            }.
+        }.
+        prev is label.
+    }.
+    S each: {:x:q logprob[q].}.
+    T each: {:x:q logprob[q].}.
+    ^[S, T].
+}.
+
+var read is {
+    ^Program input split: '\n', init fmap: \:x x reSplit: '\\s+'.
+}.
+var f is train[read run].
+var S is f head.
+var T is f last.
+
+Pen writeln: (JSON serialize: (Map cnew: {T => T. S => S.})).
